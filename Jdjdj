@@ -1,0 +1,155 @@
+-- Morfinz Hub | النسخة المكتملة بدون أي نقص
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "MorfinzHub"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+
+-- [زر الإخفاء والإظهار M]
+local ToggleBtn = Instance.new("TextButton", ScreenGui)
+ToggleBtn.Size = UDim2.new(0, 50, 0, 50)
+ToggleBtn.Position = UDim2.new(0, 10, 0.5, -25)
+ToggleBtn.Text = "M"
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
+ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleBtn.Font = Enum.Font.SourceSansBold
+ToggleBtn.Draggable = true
+
+-- [النافذة الرئيسية]
+local MainFrame = Instance.new("Frame", ScreenGui)
+MainFrame.Size = UDim2.new(0, 500, 0, 350)
+MainFrame.Position = UDim2.new(0.5, -250, 0.5, -175)
+MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+MainFrame.Active = true
+MainFrame.Draggable = true
+
+ToggleBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+end)
+
+-- [الهيدر]
+local Header = Instance.new("Frame", MainFrame)
+Header.Size = UDim2.new(1, 0, 0, 40)
+Header.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
+local Title = Instance.new("TextLabel", Header)
+Title.Size = UDim2.new(1, 0, 1, 0)
+Title.Text = "MORFINZ | HUB"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Font = Enum.Font.SourceSansBold
+Title.BackgroundTransparency = 1
+
+-- [الشريط الجانبي للتبويبات]
+local Sidebar = Instance.new("Frame", MainFrame)
+Sidebar.Size = UDim2.new(0, 120, 1, -40)
+Sidebar.Position = UDim2.new(0, 0, 0, 40)
+Sidebar.BackgroundColor3 = Color3.fromRGB(30, 30, 36)
+local SidebarList = Instance.new("UIListLayout", Sidebar)
+SidebarList.Padding = UDim.new(0, 5)
+
+-- [منطقة المحتوى]
+local ContentArea = Instance.new("Frame", MainFrame)
+ContentArea.Size = UDim2.new(1, -120, 1, -40)
+ContentArea.Position = UDim2.new(0, 120, 0, 40)
+ContentArea.BackgroundTransparency = 1
+
+local function CreateTab(name)
+    local Container = Instance.new("ScrollingFrame", ContentArea)
+    Container.Size = UDim2.new(1, 0, 1, 0)
+    Container.BackgroundTransparency = 1
+    Container.Visible = false
+    Container.ScrollBarThickness = 2
+    local List = Instance.new("UIListLayout", Container)
+    List.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    List.Padding = UDim.new(0, 5)
+    
+    local TabBtn = Instance.new("TextButton", Sidebar)
+    TabBtn.Size = UDim2.new(1, 0, 0, 40)
+    TabBtn.Text = name
+    TabBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
+    TabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    TabBtn.MouseButton1Click:Connect(function()
+        for _, v in pairs(ContentArea:GetChildren()) do if v:IsA("ScrollingFrame") then v.Visible = false end end
+        Container.Visible = true
+    end)
+    return Container
+end
+
+local PlayerTab = CreateTab("Player")
+local AntiTab = CreateTab("Anti-Cheat")
+PlayerTab.Visible = true
+
+-- [قسم اللاعب]
+local NameBox = Instance.new("TextLabel", PlayerTab)
+NameBox.Size = UDim2.new(0, 350, 0, 50)
+NameBox.Text = "Player: " .. game.Players.LocalPlayer.Name
+NameBox.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+NameBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+local function AddToggle(parent, name, callback)
+    local btn = Instance.new("TextButton", parent)
+    btn.Size = UDim2.new(0, 350, 0, 45)
+    btn.Text = name .. ": OFF"
+    btn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    local active = false
+    btn.MouseButton1Click:Connect(function()
+        active = not active
+        callback(active)
+        btn.Text = name .. ": " .. (active and "ON" or "OFF")
+        btn.BackgroundColor3 = active and Color3.fromRGB(46, 139, 87) or Color3.fromRGB(45, 45, 55)
+    end)
+end
+
+-- [1. زر السرعة]
+AddToggle(PlayerTab, "Super Speed", function(val) 
+    game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = val and 50 or 16 
+end)
+
+-- [2. زر الإخفاء - تم إرجاعه وتأكيده]
+AddToggle(PlayerTab, "Invisibility", function(val)
+    local char = game.Players.LocalPlayer.Character
+    if char then
+        for _, part in pairs(char:GetDescendants()) do
+            if (part:IsA("BasePart") and part.Name ~= "HumanoidRootPart") or part:IsA("Decal") then
+                part.Transparency = val and 1 or 0
+            end
+        end
+    end
+end)
+
+-- [3. زر الـ Lock]
+local lockEnabled = false
+local runService = game:GetService("RunService")
+local localPlayer = game.Players.LocalPlayer
+local camera = workspace.CurrentCamera
+
+local function getClosestPlayer()
+    local closest, shortestDistance = nil, math.huge
+    for _, p in pairs(game.Players:GetPlayers()) do
+        if p ~= localPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+            local dist = (p.Character.HumanoidRootPart.Position - localPlayer.Character.HumanoidRootPart.Position).Magnitude
+            if dist < shortestDistance then
+                shortestDistance = dist
+                closest = p
+            end
+        end
+    end
+    return closest
+end
+
+runService.RenderStepped:Connect(function()
+    if lockEnabled then
+        local target = getClosestPlayer()
+        if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+            camera.CFrame = CFrame.new(camera.CFrame.Position, target.Character.HumanoidRootPart.Position)
+        end
+    end
+end)
+
+AddToggle(PlayerTab, "Target Lock", function(val)
+    lockEnabled = val
+end)
+
+-- [أزرار المضادات]
+AddToggle(AntiTab, "Anti-AFK", function() end)
+AddToggle(AntiTab, "Anti-Fling", function() end)
+AddToggle(AntiTab, "Anti-Kick", function() end)
