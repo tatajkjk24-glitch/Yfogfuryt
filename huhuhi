@@ -1,0 +1,106 @@
+local Players = game:GetService("Players")
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+
+-- متغيرات تتبع اللاعب والسواد
+local TargetPlayerName = ""
+local TargetUserId = nil
+local LeaveCount = 0
+local JoinCount = 0
+local TrackingActive = false
+
+-- الدالة المسؤولة عن البحث عن اللاعب بأول 4 حروف
+local function FindPlayerByShortName(shortName)
+    shortName = string.lower(shortName)
+    for _, player in pairs(Players:GetPlayers()) do
+        local pName = string.lower(player.Name)
+        local pDisplayName = string.lower(player.DisplayName)
+        
+        if string.sub(pName, 1, #shortName) == shortName or string.sub(pDisplayName, 1, #shortName) == shortName then
+            return player
+        end
+    end
+    return nil
+end
+
+-- إنشاء واجهة تسجيل سواد المصغرة
+local Window = Fluent:CreateWindow({
+    Title = "تسجيل سواد | تيم الرواقي",
+    SubTitle = "بواسطة تيم الرواقي",
+    TabWidth = 140,
+    Size = UDim2.fromOffset(450, 320),
+    Theme = "Darker"
+})
+
+local Tab = Window:AddTab({ Title = "تسجيل سواد", Icon = "user" })
+
+Tab:AddSection("مراقبة اللاعب وتسجيل السواد")
+
+local Input = Tab:AddInput("PlayerSearch", {
+    Title = "اكتب أول 4 حروف من اسم اللاعب",
+    Default = "",
+    Placeholder = "مثال: abcd",
+    Numeric = false,
+    Finished = true,
+    Callback = function(Text)
+        if #Text >= 1 then
+            local target = FindPlayerByShortName(Text)
+            if target then
+                TargetPlayerName = target.Name
+                TargetUserId = target.UserId
+                TrackingActive = true
+                
+                Fluent:Notify({
+                    Title = "تسجيل سواد",
+                    Content = "تم اختيار اللاعب: " .. TargetPlayerName,
+                    Duration = 4
+                })
+            else
+                Fluent:Notify({
+                    Title = "تسجيل سواد",
+                    Content = "لم يتم العثور على لاعب بهذه الحروف!",
+                    Duration = 3
+                })
+            end
+        end
+    end
+})
+
+local Paragraph = Tab:AddParagraph({
+    Title = "إحصائيات السواد",
+    Content = "اللاعب المراقب: لا يوجد\nنقاط الخروج: 0\nنقاط الدخول: 0"
+})
+
+-- دالة تحديث النص في الواجهة
+local function UpdateStats()
+    local nameDisplay = TargetPlayerName ~= "" and TargetPlayerName or "لا يوجد"
+    Paragraph:SetTitle("إحصائيات السواد")
+    Paragraph:SetContent("اللاعب المراقب: " .. nameDisplay .. "\nنقاط الخروج: " .. tostring(LeaveCount) .. "\nنقاط الدخول: " .. tostring(JoinCount))
+end
+
+-- كشف خروج اللاعب
+Players.PlayerRemoving:Connect(function(player)
+    if TrackingActive and (player.Name == TargetPlayerName or player.UserId == TargetUserId) then
+        LeaveCount = LeaveCount + 1
+        UpdateStats()
+        
+        Fluent:Notify({
+            Title = "تنبيه تسجيل سواد",
+            Content = "خرج الخصم/اللاعب (" .. player.Name .. ")! نقاط الخروج الآن: " .. tostring(LeaveCount),
+            Duration = 6
+        })
+    end
+end)
+
+-- كشف دخول اللاعب مرة أخرى
+Players.PlayerAdded:Connect(function(player)
+    if TrackingActive and (player.Name == TargetPlayerName or player.UserId == TargetUserId) then
+        JoinCount = JoinCount + 1
+        UpdateStats()
+        
+        Fluent:Notify({
+            Title = "تنبيه تسجيل سواد",
+            Content = "رجع دخل اللاعب (" .. player.Name .. ")! نقاط الدخول الآن: " .. tostring(JoinCount),
+            Duration = 6
+        })
+    end
+end)
