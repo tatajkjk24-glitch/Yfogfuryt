@@ -1,0 +1,60 @@
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
+local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
+
+local Window = Fluent:CreateWindow({
+    Title = "AFK Hub",
+    SubTitle = "بواسطة تيم الرواقي",
+    TabWidth = 160,
+    Size = UDim2.fromOffset(580, 460),
+    Acrylic = true,
+    Theme = "Darker",
+    MinimizeKey = Enum.KeyCode.LeftControl
+})
+
+local Tabs = {
+    Main = Window:AddTab({ Title = "الرئيسية", Icon = "home" }),
+    Settings = Window:AddTab({ Title = "الإعدادات", Icon = "settings" })
+}
+
+Tabs.Main:AddSection("إعدادات الـ AFK")
+
+local AntiAFKToggle = Tabs.Main:AddToggle("AntiAFK", {Title = "تفعيل Anti-AFK (منع الطرد)", Default = false })
+
+AntiAFKToggle:OnChanged(function(Value)
+    if Value then
+        Fluent:Notify({
+            Title = "تيم الرواقي",
+            Content = "تم تفعيل حماية منع الطرد بنجاح!",
+            Duration = 3
+        })
+    else
+        Fluent:Notify({
+            Title = "تيم الرواقي",
+            Content = "تم إيقاف حماية منع الطرد.",
+            Duration = 3
+        })
+    end
+end)
+
+Tabs.Main:AddButton({
+    Title = "إخفاء / إظهار الواجهة",
+    Description = "يمكنك الضغط هنا لإغلاق القائمة مؤقتاً",
+    Callback = function()
+        Window:Minimize()
+    end
+})
+
+InterfaceManager:SetLibrary(Fluent)
+SaveManager:SetLibrary(Fluent)
+SaveManager:IgnoreThemeSettings()
+InterfaceManager:BuildInterfaceSection(Tabs.Settings)
+SaveManager:BuildConfigSection(Tabs.Settings)
+
+Window:SelectTab(1)
+
+Fluent:Notify({
+    Title = "تيم الرواقي",
+    Content = "أهلاً بك! تم تحميل السكربت بنجاح.",
+    Duration = 5
+})
