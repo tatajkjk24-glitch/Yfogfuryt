@@ -1,0 +1,244 @@
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
+local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
+
+-- أبعاد الواجهة المصغرة للهواتف
+local Window = Fluent:CreateWindow({
+    Title = "AFK Hub",
+    SubTitle = "بواسطة تيم الرواقي",
+    TabWidth = 130,
+    Size = UDim2.fromOffset(490, 370),
+    Acrylic = false,
+    Theme = "Darker",
+    MinimizeKey = Enum.KeyCode.LeftControl
+})
+
+local Tabs = {
+    Main = Window:AddTab({ Title = "الرئيسية", Icon = "home" }),
+    AFK = Window:AddTab({ Title = "afk الرواقي", Icon = "user-check" }),
+    Blacklist = Window:AddTab({ Title = "تسجيل سواد", Icon = "user-x" }),
+    Scripts = Window:AddTab({ Title = "سكربتات الرواقي", Icon = "code" }),
+    Performance = Window:AddTab({ Title = "تحسين الأداء", Icon = "zap" }),
+    Settings = Window:AddTab({ Title = "الإعدادات", Icon = "settings" })
+}
+
+-- الزر العائم (الرواقي) للفتح والإغلاق
+local ScreenGui = Instance.new("ScreenGui")
+local ToggleButton = Instance.new("TextButton")
+local UICorner = Instance.new("UICorner")
+
+ScreenGui.Parent = game:GetService("CoreGui") or game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.Name = "AlRawaqiToggleGUI"
+
+ToggleButton.Name = "RawaqiBtn"
+ToggleButton.Parent = ScreenGui
+ToggleButton.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+ToggleButton.Position = UDim2.new(0, 15, 0.4, 0)
+ToggleButton.Size = UDim2.new(0, 85, 0, 35)
+ToggleButton.Font = Enum.Font.SourceSansBold
+ToggleButton.Text = "الرواقي"
+ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButton.TextSize = 16.000
+ToggleButton.Active = true
+ToggleButton.Draggable = true
+
+UICorner.CornerRadius = UDim.new(0, 10)
+UICorner.Parent = ToggleButton
+
+ToggleButton.MouseButton1Click:Connect(function()
+    local VirtualInputManager = game:GetService("VirtualInputManager")
+    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.LeftControl, false, game)
+    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.LeftControl, false, game)
+end)
+
+-- الخانة الرئيسية
+Tabs.Main:AddSection("أهلاً بك في سكربت تيم الرواقي")
+Tabs.Main:AddParagraph({
+    Title = "معلومات السكربت",
+    Content = "سكربت شامل ومتكامل بحماية الـ AFK، وتسجيل السواد، وتخفيف اللاق."
+})
+
+-- خانة afk الرواقي
+Tabs.AFK:AddSection("حماية مانع طرد الرواقي")
+
+local AntiAFKActive = false
+local AntiAFKConnections = {}
+
+local AntiAFKToggle = Tabs.AFK:AddToggle("AntiAFK_Ultra", {Title = "تفعيل مانع طرد الرواقي القوي", Default = false })
+
+AntiAFKToggle:OnChanged(function(Value)
+    AntiAFKActive = Value
+    if AntiAFKActive then
+        local GC = getconnections or get_signal_cons
+        if GC then
+            for _, conn in pairs(GC(game:GetService("Players").LocalPlayer.Idled)) do
+                if conn["Disable"] then conn:Disable() elseif conn["Disconnect"] then conn:Disconnect() end
+            end
+        end
+        local VirtualUser = game:GetService("VirtualUser")
+        AntiAFKConnections["Idled"] = game:GetService("Players").LocalPlayer.Idled:Connect(function()
+            VirtualUser:CaptureController()
+            VirtualUser:ClickButton2(Vector2.new())
+        end)
+        task.spawn(function()
+            while AntiAFKActive do
+                task.wait(60)
+                if not AntiAFKActive then break end
+                VirtualUser:Button1Down(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+                task.wait(0.2)
+                VirtualUser:Button1Up(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+            end
+        end)
+        Fluent:Notify({ Title = "تيم الرواقي", Content = "تم تفعيل مانع طرد الرواقي القوي!", Duration = 3 })
+    else
+        if AntiAFKConnections["Idled"] then AntiAFKConnections["Idled"]:Disconnect() AntiAFKConnections["Idled"] = nil end
+        Fluent:Notify({ Title = "تيم الرواقي", Content = "تم إيقاف مانع طرد الرواقي.", Duration = 3 })
+    end
+end)
+
+-- خانة تسجيل سواد (تم تصحيح طريقة التحديث لتجنب خطأ SetContent)
+Tabs.Blacklist:AddSection("مراقبة الخصم وتسجيل الدخول والخروج")
+
+local Players = game:GetService("Players")
+local TargetPlayerName = ""
+local TargetUserId = nil
+local LeaveCount = 0
+local JoinCount = 0
+local TrackingActive = false
+
+local function FindPlayerByShortName(shortName)
+    shortName = string.lower(shortName)
+    for _, player in pairs(Players:GetPlayers()) do
+        local pName = string.lower(player.Name)
+        local pDisplayName = string.lower(player.DisplayName)
+        if string.find(pName, shortName, 1, true) or string.find(pDisplayName, shortName, 1, true) then
+            return player
+        end
+    end
+    return nil
+end
+
+local StatsParagraph = Tabs.Blacklist:AddParagraph({
+    Title = "إحصائيات السواد",
+    Content = "اللاعب المراقب: لا يوجد\nنقاط الخروج: 0\nنقاط الدخول: 0"
+})
+
+local function UpdateStats()
+    local nameDisplay = TargetPlayerName ~= "" and TargetPlayerName or "لا يوجد"
+    -- استخدام الطريقة الصحيحة لتحديث محتوى الـ Paragraph في Fluent عبر خاصية Desc أو التحديث المباشر للجدول إذا كانت مدعومة، أو إشعارات مفصلة لتجنب الكراش
+    pcall(function()
+        StatsParagraph:SetDesc("اللاعب المراقب: " .. nameDisplay .. "\nنقاط الخروج: " .. tostring(LeaveCount) .. "\nنقاط الدخول: " .. tostring(JoinCount))
+    end)
+end
+
+Tabs.Blacklist:AddInput("PlayerSearch", {
+    Title = "اكتب حروف من اسم الخصم",
+    Default = "",
+    Placeholder = "مثال: اسم أو جزء منه",
+    Numeric = false,
+    Finished = true,
+    Callback = function(Text)
+        if #Text >= 1 then
+            local target = FindPlayerByShortName(Text)
+            if target then
+                TargetPlayerName = target.Name
+                TargetUserId = target.UserId
+                TrackingActive = true
+                UpdateStats()
+                
+                Fluent:Notify({
+                    Title = "تسجيل سواد",
+                    Content = "تم اختيار اللاعب: " .. TargetPlayerName,
+                    Duration = 4
+                })
+            else
+                Fluent:Notify({
+                    Title = "تسجيل سواد",
+                    Content = "لم يتم العثور على لاعب بهذا الاسم!",
+                    Duration = 3
+                })
+            end
+        end
+    end
+})
+
+Players.PlayerRemoving:Connect(function(player)
+    if TrackingActive and (player.Name == TargetPlayerName or player.UserId == TargetUserId) then
+        LeaveCount = LeaveCount + 1
+        UpdateStats()
+        Fluent:Notify({
+            Title = "تسجيل سواد | تيم الرواقي",
+            Content = "خرج الخصم (" .. player.Name .. ")! نقاط الخروج: " .. tostring(LeaveCount),
+            Duration = 5
+        })
+    end
+end)
+
+Players.PlayerAdded:Connect(function(player)
+    if TrackingActive and (player.Name == TargetPlayerName or player.UserId == TargetUserId) then
+        JoinCount = JoinCount + 1
+        UpdateStats()
+        Fluent:Notify({
+            Title = "تسجيل سواد | تيم الرواقي",
+            Content = "رجع دخل الخصم (" .. player.Name .. ")! نقاط الدخول: " .. tostring(JoinCount),
+            Duration = 5
+        })
+    end
+end)
+
+-- خانة سكربتات الرواقي
+Tabs.Scripts:AddSection("السكربتات الخارجية")
+
+Tabs.Scripts:AddButton({
+    Title = "تشغيل VR7 Universal",
+    Description = "تشغيل السكربت الأول",
+    Callback = function()
+        Fluent:Notify({ Title = "تيم الرواقي", Content = "جاري تشغيل سكربت VR7...", Duration = 3 })
+        loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-VR7-45290"))()
+    end
+})
+
+Tabs.Scripts:AddButton({
+    Title = "تشغيل Anti-AFK & Anti-Kick v3",
+    Description = "تشغيل السكربت الثاني",
+    Callback = function()
+        Fluent:Notify({ Title = "تيم الرواقي", Content = "جاري تشغيل سكربت Anti-AFK...", Duration = 3 })
+        loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-AntiAFK-v-AntiKick-V3-v-Kick-Attempt-Logger-27977"))()
+    end
+})
+
+-- خانة تحسين الأداء
+Tabs.Performance:AddSection("إعدادات زيادة الفريمات")
+
+Tabs.Performance:AddButton({
+    Title = "تفعيل تخفيف لاق الرواقي القوي",
+    Callback = function()
+        local terrain = workspace:FindFirstChildOfClass('Terrain')
+        if terrain then terrain.WaterWaveSize = 0 terrain.WaterWaveSpeed = 0 terrain.WaterReflectance = 0 terrain.WaterTransparency = 0 end
+        local lighting = game:GetService("Lighting")
+        lighting.GlobalShadows = false lighting.FogEnd = 9e9
+        for _, v in pairs(lighting:GetChildren()) do if v:IsA("PostEffect") or v:IsA("Atmosphere") or v:IsA("Sky") or v:IsA("Clouds") then v:Destroy() end end
+        for _, object in pairs(workspace:GetDescendants()) do
+            if object:IsA("BasePart") and not object:IsA("MeshPart") then object.Material = Enum.Material.SmoothPlastic object.Reflectance = 0
+            elseif object:IsA("Decal") or object:IsA("Texture") then object:Destroy()
+            elseif object:IsA("ParticleEmitter") or object:IsA("Trail") or object:IsA("Smoke") or object:IsA("Fire") or object:IsA("Sparkles") then object.Enabled = false end
+        end
+        Fluent:Notify({ Title = "تيم الرواقي", Content = "تم تطبيق تخفيف اللاق الفائق بنجاح!", Duration = 4 })
+    end
+})
+
+-- إعدادات الحفظ والواجهة
+InterfaceManager:SetLibrary(Fluent)
+SaveManager:SetLibrary(Fluent)
+SaveManager:IgnoreThemeSettings()
+InterfaceManager:BuildInterfaceSection(Tabs.Settings)
+SaveManager:BuildConfigSection(Tabs.Settings)
+
+Window:SelectTab(1)
+
+-- رسالة الترحيب
+Fluent:Notify({
+    Title = "تيم الرواقي",
+    Content = "منورين يا تيم رواقي! تم تحميل السكربت بنجاح.",
+    Duration = 5
+})
