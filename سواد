@@ -1,0 +1,234 @@
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+local StartTime = tick()
+
+local Window = Rayfield:CreateWindow({
+   Name = "صمله سواد",
+   LoadingTitle = "جاري تحميل السكربت الشامل...",
+   LoadingSubtitle = "بواسطة صمله سواد",
+   ConfigurationSaving = { Enabled = false },
+   KeySystem = false
+})
+
+-- الأقسام
+local AFKTab = Window:CreateTab("نظام AFK الشامل", 4483362458)
+local ProtectionTab = Window:CreateTab("حماية Anti-Kick", 4483362458)
+local ToolsTab = Window:CreateTab("أدوات السيرفر", 4483362458)
+
+-- 1. قسم AFK والوقت
+local TimerParagraph = AFKTab:CreateParagraph({
+    Title = "⏱️ وقت التواجد في اللعبة",
+    Content = "00:00:00"
+})
+
+local AntiAfkEnabled = false
+local AutoClickerEnabled = false
+local AntiKickEnabled = true
+local VirtualUser = game:GetService("VirtualUser")
+
+game:GetService("Players").LocalPlayer.Idled:Connect(function()
+    if AntiAfkEnabled then
+        VirtualUser:CaptureController()
+        VirtualUser:ClickButton2(Vector2.new(0, 0))
+    end
+end)
+
+AFKTab:CreateToggle({
+   Name = "تفعيل Anti-AFK القوي",
+   CurrentValue = false,
+   Flag = "AntiAfkToggle",
+   Callback = function(Value)
+       AntiAfkEnabled = Value
+   end,
+})
+
+-- ميزة Auto Clicker
+AFKTab:CreateToggle({
+   Name = "تفعيل Auto-Clicker خفي (كل 5 ثواني)",
+   CurrentValue = false,
+   Callback = function(Value)
+       AutoClickerEnabled = Value
+   end,
+})
+
+task.spawn(function()
+    while task.wait(5) do
+        if AutoClickerEnabled then
+            pcall(function()
+                VirtualUser:Button1Down(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+                task.wait(0.1)
+                VirtualUser:Button1Up(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+            end)
+        end
+    end
+end)
+
+-- كتم الصوت
+AFKTab:CreateToggle({
+   Name = "كتم أصوات اللعبة (Mute Audio)",
+   CurrentValue = false,
+   Callback = function(Value)
+       UserSettings():GetService("UserGameSettings").MasterVolume = Value and 0 or 1
+   end,
+})
+
+-- الشاشة السوداء
+local BlackScreenGui = nil
+local BlackScreenText = nil
+
+AFKTab:CreateToggle({
+   Name = "وضع توفير الطاقة المتقدم (شاشة سوداء مع عداد)",
+   CurrentValue = false,
+   Callback = function(Value)
+       if Value then
+           BlackScreenGui = Instance.new("ScreenGui", game.CoreGui)
+           local Frame = Instance.new("Frame", BlackScreenGui)
+           Frame.Size = UDim2.new(1, 0, 1, 0)
+           Frame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+           
+           BlackScreenText = Instance.new("TextLabel", Frame)
+           BlackScreenText.Size = UDim2.new(1, 0, 1, 0)
+           BlackScreenText.Text = "صمله سواد - وضع الـ AFK مفعل\nالوقت: 00:00:00"
+           BlackScreenText.TextColor3 = Color3.fromRGB(0, 255, 150)
+           BlackScreenText.TextSize = 22
+           BlackScreenText.Font = Enum.Font.SourceSansBold
+       else
+           if BlackScreenGui then
+               BlackScreenGui:Destroy()
+               BlackScreenGui = nil
+               BlackScreenText = nil
+           end
+       end
+   end,
+})
+
+-- ==========================================
+-- 🛡️ قسم ونظام ANTI-KICK المطور
+-- ==========================================
+
+ProtectionTab:CreateSection("إعدادات Anti-Kick")
+
+ProtectionTab:CreateToggle({
+   Name = "تفعيل نظام Anti-Kick القوي",
+   CurrentValue = true,
+   Callback = function(Value)
+       AntiKickEnabled = Value
+   end,
+})
+
+ProtectionTab:CreateParagraph({
+    Title = "🛡️ حالة الحماية",
+    Content = "نظام الـ Anti-Kick يعمل حالياً في الخلفية ويمنع السكربتات المحلية وأنظمة الحماية من طردك."
+})
+
+local LocalPlayer = game:GetService("Players").LocalPlayer
+local OldNamecall
+local OldKick
+
+-- Hook للطرد المباشر
+OldKick = hookfunction(LocalPlayer.Kick, function(self, ...)
+    if AntiKickEnabled and self == LocalPlayer then
+        Rayfield:Notify({
+            Title = "صمله سواد",
+            Content = "🛡️ تم منع محاولة كيك (Kick Direct)!",
+            Duration = 5,
+            Image = 4483362458,
+        })
+        return nil
+    end
+    return OldKick(self, ...)
+end)
+
+-- Hook للطرد عبر __namecall
+OldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+    local Method = getnamecallmethod()
+    if AntiKickEnabled and self == LocalPlayer and string.lower(Method) == "kick" then
+        Rayfield:Notify({
+            Title = "صمله سواد",
+            Content = "🛡️ تم اعتراض وتخطي حماية Kick خفية!",
+            Duration = 5,
+            Image = 4483362458,
+        })
+        return nil
+    end
+    return OldNamecall(self, ...)
+end)
+
+-- إعادة الاتصال عند ظهور نافذة Error
+game:GetService("GuiService").ErrorMessageChanged:Connect(function()
+    if AntiKickEnabled then
+        task.wait(2)
+        game:GetService("TeleportService"):Teleport(game.PlaceId, LocalPlayer)
+    end
+end)
+
+-- 3. أدوات السيرفر
+ToolsTab:CreateSection("تنظيف وتخفيف الذاكرة")
+
+ToolsTab:CreateButton({
+   Name = "تخفيف الجرافيكس وتنظيف الذاكرة",
+   Callback = function()
+       collectgarbage("collect")
+       for _, v in pairs(game:GetDescendants()) do
+           if v:IsA("BasePart") then
+               v.Material = Enum.Material.SmoothPlastic
+           elseif v:IsA("Texture") or v:IsA("Decal") then
+               v:Destroy()
+           end
+       end
+   end,
+})
+
+ToolsTab:CreateSection("التحكم بالسيرفرات")
+
+ToolsTab:CreateButton({
+   Name = "إعادة الاتصال بالسيرفر (Rejoin)",
+   Callback = function()
+       game:GetService("TeleportService"):Teleport(game.PlaceId, LocalPlayer)
+   end,
+})
+
+ToolsTab:CreateButton({
+   Name = "انتقال لسيرفر آخر (Server Hop)",
+   Callback = function()
+       local TPS = game:GetService("TeleportService")
+       local Api = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
+       local Http = game:GetService("HttpService")
+       local Servers = Http:JSONDecode(game:HttpGet(Api))
+       
+       for _, s in pairs(Servers.data) do
+           if s.playing ~= s.maxPlayers and s.id ~= game.JobId then
+               TPS:TeleportToPlaceInstance(game.PlaceId, s.id, LocalPlayer)
+               break
+           end
+       end
+   end,
+})
+
+-- تنظيف الذاكرة كل 5 دقائق
+task.spawn(function()
+    while task.wait(300) do
+        collectgarbage("collect")
+    end
+end)
+
+-- تحديث العداد
+task.spawn(function()
+    while task.wait(1) do
+        local Elapsed = math.floor(tick() - StartTime)
+        local Hours = math.floor(Elapsed / 3600)
+        local Minutes = math.floor((Elapsed % 3600) / 60)
+        local Seconds = Elapsed % 60
+        
+        local TimeFormatted = string.format("%02d:%02d:%02d", Hours, Minutes, Seconds)
+        
+        TimerParagraph:Set({
+            Title = "⏱️ وقت التواجد في اللعبة",
+            Content = TimeFormatted
+        })
+        
+        if BlackScreenText then
+            BlackScreenText.Text = "صمله سواد - وضع الـ AFK مفعل\nمدة التواجد: " .. TimeFormatted
+        end
+    end
+end)
