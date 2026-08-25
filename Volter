@@ -1,0 +1,119 @@
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "SawadCleanVersion"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+MainFrame.Position = UDim2.new(0.55, 0, 0.2, 0)
+MainFrame.Size = UDim2.new(0, 320, 0, 260)
+MainFrame.Active = true
+MainFrame.Draggable = true
+
+local Title = Instance.new("TextLabel")
+Title.Parent = MainFrame
+Title.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+Title.Size = UDim2.new(1, 0, 0, 38)
+Title.Font = Enum.Font.SourceSansBold
+Title.Text = "🖤 نقاط سواد 🖤"
+Title.TextColor3 = Color3.fromRGB(200, 100, 255)
+Title.TextSize = 16
+
+local targetPrefix = ""
+local isTracking = false
+local playerScores = {}
+
+local NameInput = Instance.new("TextBox")
+NameInput.Parent = MainFrame
+NameInput.PlaceholderText = "اكتب الحرفين هنا..."
+NameInput.Size = UDim2.new(0.55, 0, 0, 35)
+NameInput.Position = UDim2.new(0.05, 0, 0.2, 0)
+NameInput.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+NameInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+local StartBtn = Instance.new("TextButton")
+StartBtn.Parent = MainFrame
+StartBtn.Size = UDim2.new(0.32, 0, 0, 35)
+StartBtn.Position = UDim2.new(0.63, 0, 0.2, 0)
+StartBtn.Text = "تفعيل"
+StartBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+StartBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+StartBtn.Font = Enum.Font.SourceSansBold
+
+local ScrollList = Instance.new("ScrollingFrame")
+ScrollList.Parent = MainFrame
+ScrollList.Position = UDim2.new(0.05, 0, 0.42, 0)
+ScrollList.Size = UDim2.new(0.9, 0, 0.53, 0)
+ScrollList.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
+
+local UIList = Instance.new("UIListLayout")
+UIList.Parent = ScrollList
+UIList.SortOrder = Enum.SortOrder.LayoutOrder
+UIList.Padding = UDim.new(0, 5)
+
+-- دالة تحديث السجل
+local function forceUpdateUI()
+    for _, child in ipairs(ScrollList:GetChildren()) do
+        if child:IsA("TextLabel") then
+            child:Destroy()
+        end
+    end
+
+    for userId, data in pairs(playerScores) do
+        local Card = Instance.new("TextLabel")
+        Card.Parent = ScrollList
+        Card.Size = UDim2.new(1, 0, 0, 40)
+        Card.BackgroundColor3 = Color3.fromRGB(28, 28, 28)
+        Card.TextColor3 = Color3.fromRGB(200, 150, 255)
+        Card.Font = Enum.Font.SourceSansBold
+        Card.TextSize = 14
+        Card.Text = string.format(" 🎯 الخصم: %s\n 🖤 نقاط سواد: %d", data.name, data.totalPoints)
+    end
+end
+
+-- تفعيل التتبع عند الضغط على زر شغال
+StartBtn.MouseButton1Click:Connect(function()
+    targetPrefix = NameInput.Text:lower():gsub("%s+", "")
+    if #targetPrefix >= 1 then
+        isTracking = true
+        StartBtn.Text = "شغال ✅"
+        StartBtn.BackgroundColor3 = Color3.fromRGB(40, 180, 40)
+        
+        for _, p in ipairs(Players:GetPlayers()) do
+            local name = p.Name:lower()
+            local display = p.DisplayName:lower()
+            if name:find(targetPrefix, 1, true) or display:find(targetPrefix, 1, true) then
+                -- يبدأ بـ 0 نقاط بالدعم الأولي
+                playerScores[p.UserId] = { name = p.Name, totalPoints = 0 }
+            end
+        end
+        forceUpdateUI()
+    end
+end)
+
+-- زيادة النقطة فقط عند الخروج الفعلي
+Players.PlayerRemoving:Connect(function(player)
+    if not isTracking then return end
+    if playerScores[player.UserId] then
+        playerScores[player.UserId].totalPoints = playerScores[player.UserId].totalPoints + 1
+        forceUpdateUI()
+    end
+end)
+
+-- رصد دخول أي لاعب جديد وإعطائه 0 نقاط
+Players.PlayerAdded:Connect(function(player)
+    if not isTracking then return end
+    task.wait(1)
+    local name = player.Name:lower()
+    local display = player.DisplayName:lower()
+    if name:find(targetPrefix, 1, true) or display:find(targetPrefix, 1, true) then
+        if not playerScores[player.UserId] then
+            playerScores[player.UserId] = { name = player.Name, totalPoints = 0 }
+            forceUpdateUI()
+        end
+    end
+end)
