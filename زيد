@@ -1,0 +1,487 @@
+-- تحميل مكتبة Rayfield Library
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+-- إنشاء النافذة الرئيسية
+local Window = Rayfield:CreateWindow({
+   Name = "تكريتي~🇦🇱 | Protection & Tracker",
+   LoadingTitle = "تكريتي~🇦🇱 Suite",
+   LoadingSubtitle = "by Delta Developer | حقوق زيد",
+   ConfigurationSaving = {
+      Enabled = false
+   },
+   KeySystem = false
+})
+
+-- متغيرات التفعيل والحماية
+local AntiAfkEnabled = true
+local AntiKickEnabled = true
+local AutoZaidEnabled = false
+local FastLagReducerEnabled = false
+local BatterySaverEnabled = false
+local PhoneCoolerEnabled = false
+
+-- جدول الخصوم مع إحصائيات كل خصم
+local TargetsData = {}
+
+local VirtualUser = game:GetService("VirtualUser")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Lighting = game:GetService("Lighting")
+local RunService = game:GetService("RunService")
+local CoreGui = game:GetService("CoreGui")
+local OldNamecall
+
+-- دالة تحويل الثواني إلى صيغة وقت (ساعات:دقائق:ثواني)
+local function FormatTime(seconds)
+    local hours = math.floor(seconds / 3600)
+    local mins = math.floor((seconds % 3600) / 60)
+    local secs = math.floor(seconds % 60)
+    return string.format("%02d:%02d:%02d", hours, mins, secs)
+end
+
+-- دالة خفض اللاق وإخفاء كافة تفاصيل الماب بالكامل
+local function ApplyExtremeLagReducer()
+    pcall(function()
+        settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+        Lighting.GlobalShadows = false
+        Lighting.FogEnd = 9e9
+        Lighting.Brightness = 1
+        
+        -- إخفاء التأثيرات والمؤثرات البيئية
+        for _, v in pairs(Lighting:GetChildren()) do
+            if v:IsA("PostEffect") or v:IsA("Atmosphere") or v:IsA("Sky") or v:IsA("Bloom") or v:IsA("Blur") then
+                v:Destroy()
+            end
+        end
+
+        -- مسح وإخفاء جميع تفاصيل الماب
+        for _, obj in pairs(workspace:GetDescendants()) do
+            if obj:IsA("BasePart") then
+                obj.Material = Enum.Material.SmoothPlastic
+                obj.CastShadow = false
+                if not obj:IsDescendantOf(LocalPlayer.Character) then
+                    obj.Transparency = 1 -- إخفاء كافة مجسمات الماب
+                end
+            elseif obj:IsA("Decal") or obj:IsA("Texture") or obj:IsA("SurfaceAppearance") then
+                obj:Destroy()
+            elseif obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Smoke") or obj:IsA("Fire") or obj:IsA("Sparkles") then
+                obj.Enabled = false
+                obj:Destroy()
+            elseif obj:IsA("Shirt") or obj:IsA("Pants") or obj:IsA("ShirtGraphic") then
+                -- الحفاظ على مظهر اللاعبين اختياري
+            end
+        end
+    end)
+end
+
+-- ==========================================
+-- إنشاء واجهة الشاشة السوداء (مع الحقوق والتايمر)
+-- ==========================================
+local BatterySaverSeconds = 0
+local PureBlackGui = Instance.new("ScreenGui")
+PureBlackGui.Name = "PureBlackBatteryUI"
+PureBlackGui.ResetOnSpawn = false
+
+local PureBlackFrame = Instance.new("Frame")
+PureBlackFrame.Size = UDim2.new(1, 0, 1, 0)
+PureBlackFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+PureBlackFrame.BackgroundTransparency = 0
+PureBlackFrame.BorderSizePixel = 0
+PureBlackFrame.ZIndex = 999999
+PureBlackFrame.Parent = PureBlackGui
+
+-- نص التايمر (ثواني ودقائق وساعات)
+local TimerLabel = Instance.new("TextLabel")
+TimerLabel.Size = UDim2.new(1, 0, 0.1, 0)
+TimerLabel.Position = UDim2.new(0, 0, 0.40, 0)
+TimerLabel.BackgroundTransparency = 1
+TimerLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TimerLabel.TextSize = 36
+TimerLabel.Font = Enum.Font.SourceSansBold
+TimerLabel.Text = "⏱️ 00:00:00"
+TimerLabel.ZIndex = 1000000
+TimerLabel.Parent = PureBlackFrame
+
+-- نص الحقوق
+local RightsLabel = Instance.new("TextLabel")
+RightsLabel.Size = UDim2.new(1, 0, 0.08, 0)
+RightsLabel.Position = UDim2.new(0, 0, 0.50, 0)
+RightsLabel.BackgroundTransparency = 1
+RightsLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
+RightsLabel.TextSize = 28
+RightsLabel.Font = Enum.Font.SourceSansBold
+RightsLabel.Text = "حقوق زيد ~ لتكريتي"
+RightsLabel.ZIndex = 1000000
+RightsLabel.Parent = PureBlackFrame
+
+-- إلحاق الواجهة بالشاشة
+pcall(function()
+    PureBlackGui.Parent = CoreGui
+end)
+PureBlackGui.Enabled = false
+
+-- حلقة التايمر الحية الشغالة بالثواني
+task.spawn(function()
+    while true do
+        task.wait(1)
+        if BatterySaverEnabled then
+            BatterySaverSeconds = BatterySaverSeconds + 1
+            TimerLabel.Text = "⏱️ " .. FormatTime(BatterySaverSeconds)
+        end
+    end
+end)
+
+-- التحكم بفريمات المبرد
+RunService.RenderStepped:Connect(function()
+    if PhoneCoolerEnabled then
+        setfpscap(10)
+    end
+end)
+
+-- ==========================================
+-- 1. تبويب الحماية (Protection)
+-- ==========================================
+local ProtectionTab = Window:CreateTab("الحماية", 4483345998)
+
+local AFKToggle = ProtectionTab:CreateToggle({
+   Name = "Anti-AFK (مانع الطرد الخامل)",
+   CurrentValue = true,
+   Flag = "AntiAFK",
+   Callback = function(Value)
+      AntiAfkEnabled = Value
+   end,
+})
+
+local KickToggle = ProtectionTab:CreateToggle({
+   Name = "Anti-Kick (حماية الكيك المحلي)",
+   CurrentValue = true,
+   Flag = "AntiKick",
+   Callback = function(Value)
+      AntiKickEnabled = Value
+   end,
+})
+
+-- زر أوتو زيد (يدوي 100% - كل 3 دقائق ضغطة)
+local AutoZaidToggle = ProtectionTab:CreateToggle({
+   Name = "أوتو زيد (ضغطة كل 3 دقائق)",
+   CurrentValue = false,
+   Flag = "AutoZaid",
+   Callback = function(Value)
+      AutoZaidEnabled = Value
+      if AutoZaidEnabled then
+          Rayfield:Notify({
+             Title = "تكريتي~🇦🇱",
+             Content = "تم تفعيل أوتو زيد (ضغطة كل 3 دقائق)!",
+             Duration = 4,
+             Image = 4483345998,
+          })
+      else
+          Rayfield:Notify({
+             Title = "تكريتي~🇦🇱",
+             Content = "تم إيقاف أوتو زيد!",
+             Duration = 4,
+             Image = 4483345998,
+          })
+      end
+   end,
+})
+
+-- زر مخفف اللاق القوي (إخفاء كل تفاصيل الماب)
+local LagReducerToggle = ProtectionTab:CreateToggle({
+   Name = "مخفف لاق خارق (إخفاء تفاصيل الماب)",
+   CurrentValue = false,
+   Flag = "LagReducer",
+   Callback = function(Value)
+      FastLagReducerEnabled = Value
+      if FastLagReducerEnabled then
+          ApplyExtremeLagReducer()
+          Rayfield:Notify({
+             Title = "تكريتي~🇦🇱 FPS Boost",
+             Content = "تم إخفاء جميع تفاصيل الماب لرفع الفريمات بأعلى شكل!",
+             Duration = 4,
+             Image = 4483345998,
+          })
+      end
+   end,
+})
+
+-- زر موفر البطارية (يظهر الشاشة السوداء + الحقوق والتايمر)
+local BatterySaverToggle = ProtectionTab:CreateToggle({
+   Name = "موفر البطارية (شاشة سوداء + تايمر)",
+   CurrentValue = false,
+   Flag = "BatterySaver",
+   Callback = function(Value)
+      BatterySaverEnabled = Value
+      PureBlackGui.Enabled = Value
+      if Value then
+          BatterySaverSeconds = 0
+          TimerLabel.Text = "⏱️ 00:00:00"
+          Rayfield:Notify({
+             Title = "تكريتي~🇦🇱 Battery Saver",
+             Content = "تم تفعيل موفر البطارية وبدء التايمر والشاشة السوداء!",
+             Duration = 4,
+             Image = 4483345998,
+          })
+      else
+          Rayfield:Notify({
+             Title = "تكريتي~🇦🇱 Battery Saver",
+             Content = "تم إيقاف موفر البطارية والإرجاع للوضع الطبيعي!",
+             Duration = 4,
+             Image = 4483345998,
+          })
+      end
+   end,
+})
+
+-- زر مبرد الهاتف
+local PhoneCoolerToggle = ProtectionTab:CreateToggle({
+   Name = "مبرد الهاتف (Phone Cooler - 10 FPS)",
+   CurrentValue = false,
+   Flag = "PhoneCooler",
+   Callback = function(Value)
+      PhoneCoolerEnabled = Value
+      if Value then
+          ApplyExtremeLagReducer()
+          Rayfield:Notify({
+             Title = "تكريتي~🇦🇱 Phone Cooler",
+             Content = "تم تفعيل مبرد الهاتف وخفض الفريمات لـ 10 FPS لراحة الجهاز!",
+             Duration = 5,
+             Image = 4483345998,
+          })
+      else
+          setfpscap(60)
+          Rayfield:Notify({
+             Title = "تكريتي~🇦🇱 Phone Cooler",
+             Content = "تم إيقاف مبرد الهاتف والعودة للوضع الطبيعي!",
+             Duration = 4,
+             Image = 4483345998,
+          })
+      end
+   end,
+})
+
+-- هوك Anti-Kick
+OldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(Self, ...)
+    local Method = getnamecallmethod()
+    if AntiKickEnabled and (Method == "Kick" or Method == "kick") and Self == LocalPlayer then
+        Rayfield:Notify({
+           Title = "تكريتي~🇦🇱 Anti-Kick",
+           Content = "تم منع محاولة طرد (Kick) محلية!",
+           Duration = 4,
+           Image = 4483345998,
+        })
+        return nil
+    end
+    return OldNamecall(Self, ...)
+end))
+
+-- حدث Anti-AFK
+LocalPlayer.Idled:Connect(function()
+    if AntiAfkEnabled then
+        VirtualUser:CaptureController()
+        VirtualUser:ClickButton2(Vector2.new(0,0))
+    end
+end)
+
+-- حلقة قفز خفيفة للـ AFK
+task.spawn(function()
+    while task.wait(60) do
+        if AntiAfkEnabled then
+            pcall(function()
+                if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+                    LocalPlayer.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                end
+            end)
+        end
+    end
+end)
+
+-- حلقة أوتو زيد (تنفذ الضغطة كل 180 ثانية / 3 دقائق فقط عند التفعيل)
+task.spawn(function()
+    while true do
+        task.wait(180)
+        if AutoZaidEnabled then
+            pcall(function()
+                local camera = workspace.CurrentCamera
+                if camera then
+                    local center = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
+                    VirtualInputManager:SendMouseButtonEvent(center.X, center.Y, 0, true, game, 1)
+                    task.wait(0.05)
+                    VirtualInputManager:SendMouseButtonEvent(center.X, center.Y, 0, false, game, 1)
+                end
+            end)
+        end
+    end
+end)
+
+-- ==========================================
+-- 2. تبويب مراقبة الخصوم (Target Tracker)
+-- ==========================================
+local TrackerTab = Window:CreateTab("مراقبة الخصوم", 4483345998)
+
+-- قسم الإحصائيات الفردية للخصوم
+local StatsSection = TrackerTab:CreateSection("إحصائيات الخصوم المسجلين 📊")
+local EmptyLabel = TrackerTab:CreateLabel("اكتب أول حرفين لإكمال الاسم وتنزيله...")
+
+TrackerTab:CreateSection("إضافة الخصوم بالتطابق 🎯")
+
+-- دالة تحديث العرض النصي للخصم مع تايمر الوقت
+local function UpdateTargetDisplay(data)
+    if data and data.Label then
+        local formattedTime = FormatTime(data.TotalTimeSpent or 0)
+        data.Label:Set("👤 " .. data.OriginalName .. " | دخول: " .. tostring(data.Joins) .. " | خروج: " .. tostring(data.Leaves) .. " | ⏱️ " .. formattedTime)
+    end
+end
+
+-- دالة الإضافة التلقائية عند كتابة أول حرفين أو أكثر
+local function AddTargetSmart(input)
+    if input == nil or #input < 2 then return end
+    
+    local cleanInput = string.lower(string.gsub(input, "^%s*(.-)%s*$", "%1"))
+    local matchedPlayer = nil
+
+    for _, plr in pairs(Players:GetPlayers()) do
+        local nameLower = string.lower(plr.Name)
+        local displayLower = string.lower(plr.DisplayName)
+        
+        if string.sub(nameLower, 1, #cleanInput) == cleanInput or string.sub(displayLower, 1, #cleanInput) == cleanInput then
+            matchedPlayer = plr
+            break
+        end
+    end
+
+    local fullName = matchedPlayer and matchedPlayer.Name or input
+    local lowerKey = string.lower(fullName)
+
+    if TargetsData[lowerKey] then return end
+
+    if EmptyLabel then
+        EmptyLabel:Set("")
+    end
+
+    local isCurrentlyIn = matchedPlayer ~= nil
+    local createdLabel = TrackerTab:CreateLabel("")
+
+    TargetsData[lowerKey] = {
+        OriginalName = fullName,
+        Joins = isCurrentlyIn and 1 or 0,
+        Leaves = 0,
+        IsPresent = isCurrentlyIn,
+        LastJoinTime = isCurrentlyIn and os.time() or nil,
+        TotalTimeSpent = 0,
+        Label = createdLabel
+    }
+
+    UpdateTargetDisplay(TargetsData[lowerKey])
+
+    if matchedPlayer and string.lower(matchedPlayer.DisplayName) ~= string.lower(matchedPlayer.Name) then
+        local displayKey = string.lower(matchedPlayer.DisplayName)
+        TargetsData[displayKey] = TargetsData[lowerKey]
+    end
+
+    Rayfield:Notify({
+       Title = "تكريتي~🇦🇱 Tracker",
+       Content = "تم تسجيل الخصم مع التايمر: " .. fullName,
+       Duration = 4,
+       Image = 4483345998,
+    })
+end
+
+-- مربع إدخال الإكمال التلقائي
+TrackerTab:CreateInput({
+   Name = "اكتب أول حرفين من اسم الخصم (ينزل الاسم كامل تلقائياً)",
+   PlaceholderText = "مثال: za...",
+   RemoveTextOnFocus = false,
+   Callback = function(Text)
+      AddTargetSmart(Text)
+   end,
+})
+
+-- زر تصفير القائمة
+TrackerTab:CreateButton({
+   Name = "تصفير ومسح قائمة الخصوم",
+   Callback = function()
+      for key, data in pairs(TargetsData) do
+          if data.Label then
+              pcall(function() data.Label:Set("") end)
+          end
+      end
+      TargetsData = {}
+      if EmptyLabel then
+          EmptyLabel:Set("اكتب أول حرفين لإكمال الاسم وتنزيله...")
+      end
+      Rayfield:Notify({
+         Title = "تكريتي~🇦🇱 Tracker",
+         Content = "تم مسح جميع الخصوم وإعادة التصفير!",
+         Duration = 4,
+         Image = 4483345998,
+      })
+   end,
+})
+
+-- قسم الحقوق التوضيحي أسفل تبويب التتبع
+TrackerTab:CreateSection("حقوق والملكية 👑")
+TrackerTab:CreateLabel("حقوق زيد - Delta Developer © 2026")
+
+-- دالة الحصول على بيانات الخصم
+local function getTargetData(plr)
+   local nameLower = string.lower(plr.Name)
+   local displayLower = string.lower(plr.DisplayName)
+   return TargetsData[nameLower] or TargetsData[displayLower]
+end
+
+-- حلقة الـ Timer المباشرة لتحديث ثواني وجود الخصم داخل السيرفر
+task.spawn(function()
+    while task.wait(1) do
+        for _, data in pairs(TargetsData) do
+            if data.IsPresent then
+                data.TotalTimeSpent = data.TotalTimeSpent + 1
+                UpdateTargetDisplay(data)
+            end
+        end
+    end
+end)
+
+-- مراقبة دخول الخصم
+Players.PlayerAdded:Connect(function(plr)
+   local targetData = getTargetData(plr)
+   if targetData then
+      targetData.Joins = targetData.Joins + 1
+      targetData.IsPresent = true
+      targetData.LastJoinTime = os.time()
+      UpdateTargetDisplay(targetData)
+      
+      Rayfield:Notify({
+         Title = "🚨 تنبيه خصم (دخول)",
+         Content = "الخصم [" .. plr.Name .. "] دخل السيرفر الآن!",
+         Duration = 6,
+         Image = 4483345998,
+      })
+   end
+end)
+
+-- مراقبة خروج الخصم
+Players.PlayerRemoving:Connect(function(plr)
+   local targetData = getTargetData(plr)
+   if targetData then
+      targetData.Leaves = targetData.Leaves + 1
+      targetData.IsPresent = false
+      UpdateTargetDisplay(targetData)
+      
+      Rayfield:Notify({
+         Title = "⚠️ تنبيه خصم (خروج)",
+         Content = "الخصم [" .. plr.Name .. "] غادر السيرفر الآن!",
+         Duration = 6,
+         Image = 4483345998,
+      })
+   end
+end)
+
+-- إشعار التشغيل
+Rayfield:Notify({
+   Title = "حقوق زيد | تكريتي~🇦🇱",
+   Content = "تم تحديث المخفف ليخفي جميع مجسمات وتفاصيل الماب بنجاح!",
+   Duration = 5,
+   Image = 4483345998,
+})
