@@ -1,0 +1,295 @@
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+local Window = Rayfield:CreateWindow({
+   Name = "سواد حل مشاكل - النسخة المعدلة",
+   LoadingTitle = "جاري تحميل السكربت...",
+   LoadingSubtitle = "Delta Executor",
+   ConfigurationSaving = { Enabled = false }
+})
+
+-- التبويبات
+local MainTab = Window:CreateTab("حلول المشاكل", 4483362458)
+local UltraAfkTab = Window:CreateTab("AFK خارق ⚡", 4483362458)
+local DefenseTab = Window:CreateTab("حماية الكيك", 4483362458)
+
+---------------------------------------------------------
+-- 1. تبويب AFK الخارق (المعدل)
+---------------------------------------------------------
+UltraAfkTab:CreateSection("شاشة الحماية السوداء (Black Screen Saver)")
+
+-- إنشاء واجهة الشاشة السوداء الحقيقية
+local ScreenGui = Instance.new("ScreenGui")
+local BlackFrame = Instance.new("Frame")
+local StatusText = Instance.new("TextLabel")
+
+ScreenGui.Name = "SwaidBlackScreen"
+ScreenGui.Parent = game:GetService("CoreGui")
+ScreenGui.Enabled = false
+
+BlackFrame.Parent = ScreenGui
+BlackFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+BlackFrame.Size = UDim2.new(1, 0, 1, 0)
+BlackFrame.ZIndex = 999999
+
+StatusText.Parent = BlackFrame
+StatusText.Size = UDim2.new(1, 0, 1, 0)
+StatusText.BackgroundTransparency = 1
+StatusText.TextColor3 = Color3.fromRGB(0, 255, 150)
+StatusText.TextSize = 24
+StatusText.Font = Enum.Font.SourceSansBold
+StatusText.Text = "❄️ شاشة مبرد سواد شغالة - الجهاز في حالة استراحة ❄️\n(أطفئ الزر لإعادة الشاشة)"
+
+-- زر الشاشة السوداء الحقيقية
+UltraAfkTab:CreateToggle({
+   Name = "🌑 الشاشة السوداء (تغطية الشاشة لتوفير الطاقة)",
+   CurrentValue = false,
+   Callback = function(Value)
+       ScreenGui.Enabled = Value
+       if Value then
+           Rayfield:Notify({Title = "الشاشة السوداء 🌑", Content = "تم تفعيل الشاشة السوداء الحقيقية وتوفير الطاقة!"})
+       else
+           Rayfield:Notify({Title = "الشاشة السوداء 🌑", Content = "تم إلغاء الشاشة السوداء وإعادة الرؤية."})
+       end
+   end,
+})
+
+UltraAfkTab:CreateSection("حركة AFK المستمرة والفعالة")
+
+-- نظام الـ AFK المستمر بالحركة
+local AdvancedAfkActive = false
+UltraAfkTab:CreateToggle({
+   Name = "👑 نظام الـ AFK الذكي (حركة مستمرة ونقر)",
+   CurrentValue = false,
+   Callback = function(Value)
+       AdvancedAfkActive = Value
+       if Value then
+           Rayfield:Notify({Title = "AFK الذكي 👑", Content = "تم تفعيل الحركة المستمرة للشخصية!"})
+           task.spawn(function()
+               local VirtualUser = game:GetService("VirtualUser")
+               while AdvancedAfkActive do
+                   -- نقرة وهمية
+                   VirtualUser:CaptureController()
+                   VirtualUser:ClickButton2(Vector2.new())
+
+                   local char = game.Players.LocalPlayer.Character
+                   if char and char:FindFirstChild("Humanoid") then
+                       -- تحريك الشخصية خطوة لليمن ثم خطوة لليسار والقفز
+                       char.Humanoid:Move(Vector3.new(2, 0, 0), false)
+                       task.wait(0.5)
+                       char.Humanoid:Move(Vector3.new(-2, 0, 0), false)
+                       task.wait(0.5)
+                       char.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                   end
+                   task.wait(5) -- تكرار الحركة كل 5 ثوانٍ
+               end
+           end)
+       else
+           Rayfield:Notify({Title = "AFK الذكي 👑", Content = "تم إيقاف حركة الـ AFK."})
+       end
+   end,
+})
+
+-- منع التعليق والتجميد تلقائياً (Anti-Stuck System)
+local AntiStuckActive = false
+UltraAfkTab:CreateToggle({
+   Name = "🌀 منع تعليق الشخصية (Anti-Stuck Teleport)",
+   CurrentValue = false,
+   Callback = function(Value)
+       AntiStuckActive = Value
+       if Value then
+           Rayfield:Notify({Title = "Anti-Stuck 🌀", Content = "تم تفعيل نظام الإنعاش الذاتي عند التعليق!"})
+           task.spawn(function()
+               while AntiStuckActive do
+                   local char = game.Players.LocalPlayer.Character
+                   if char and char:FindFirstChild("HumanoidRootPart") then
+                       local lastPos = char.HumanoidRootPart.Position
+                       task.wait(60)
+                       if AntiStuckActive and (char.HumanoidRootPart.Position - lastPos).Magnitude < 1 then
+                           char.HumanoidRootPart.CFrame = char.HumanoidRootPart.CFrame + Vector3.new(0, 3, 0)
+                       end
+                   else
+                       task.wait(5)
+                   end
+               end
+           end)
+       else
+           Rayfield:Notify({Title = "Anti-Stuck 🌀", Content = "تم إيقاف نظام منع التعليق."})
+       end
+   end,
+})
+
+---------------------------------------------------------
+-- 2. تبويب حلول المشاكل
+---------------------------------------------------------
+MainTab:CreateSection("مشكلة: ضعاف النت وارتفاع البينج (Ping Lag)")
+local NetworkBoostActive = false
+MainTab:CreateToggle({
+   Name = "🌐 تسريع وتقوية النت (Ping Booster & Data Optimize)",
+   CurrentValue = false,
+   Callback = function(Value)
+       NetworkBoostActive = Value
+       if Value then
+           local NetworkClient = game:GetService("NetworkClient")
+           if sethiddenproperty then
+               pcall(function()
+                   sethiddenproperty(workspace, "InterpolationThrottling", Enum.InterpolationThrottlingMode.Disabled)
+                   sethiddenproperty(NetworkClient, "ClientReplicatorUpdateRate", 60)
+               end)
+           end
+           task.spawn(function()
+               while NetworkBoostActive do
+                   settings().Network.IncomingReplicationLag = 0
+                   task.wait(10)
+               end
+           end)
+           Rayfield:Notify({Title = "تقوية النت 🌐", Content = "تم تقليل التأخير (Ping) وتسريع الاستجابة!"})
+       else
+           Rayfield:Notify({Title = "تقوية النت 🌐", Content = "تم إيقاف تسريع الاتصال."})
+       end
+   end,
+})
+
+MainTab:CreateSection("مبرد الجهاز أثناء الـ AFK")
+MainTab:CreateToggle({
+   Name = "❄️ مبرد سواد (خفض الفريمات لـ 10 FPS)",
+   CurrentValue = false,
+   Callback = function(Value)
+       if Value then
+           if setfpscap then setfpscap(10) end
+           Rayfield:Notify({Title = "مبرد سواد ❄️", Content = "تم خفض الفريمات إلى 10 FPS!"})
+       else
+           if setfpscap then setfpscap(60) end
+           Rayfield:Notify({Title = "مبرد سواد ❄️", Content = "عادت الفريمات إلى 60 FPS!"})
+       end
+   end,
+})
+
+MainTab:CreateSection("مشكلة: اللاق العالي وثقل اللعبة")
+MainTab:CreateToggle({
+   Name = "🚀 مخفف لاق خارق (إزالة التأثيرات والـ Textures)",
+   CurrentValue = false,
+   Callback = function(Value)
+       if Value then
+           game:GetService("Lighting").GlobalShadows = false
+           for _, v in pairs(game:GetDescendants()) do
+               if v:IsA("Part") or v:IsA("UnionOperation") or v:IsA("MeshPart") then
+                   v.Material = Enum.Material.SmoothPlastic
+               elseif v:IsA("Decal") or v:IsA("Texture") then
+                   v.Transparency = 1
+               elseif v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Smoke") or v:IsA("Fire") then
+                   v.Enabled = false
+               end
+           end
+           Rayfield:Notify({Title = "مخفف اللاق", Content = "تم تفعيل التخفيف الخارق!"})
+       else
+           game:GetService("Lighting").GlobalShadows = true
+           for _, v in pairs(game:GetDescendants()) do
+               if v:IsA("Decal") or v:IsA("Texture") then
+                   v.Transparency = 0
+               elseif v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Smoke") or v:IsA("Fire") then
+                   v.Enabled = true
+               end
+           end
+           Rayfield:Notify({Title = "مخفف اللاق", Content = "تم إيقاف التخفيف وإعادة الجرافيكس."})
+       end
+   end,
+})
+
+MainTab:CreateSection("مشكلة: الطرد بعد 20 دقيقة خمول")
+local AntiAfkConnection = nil
+MainTab:CreateToggle({
+   Name = "🔧 حل مشكلة الخمول (Anti-AFK Fix)",
+   CurrentValue = false,
+   Callback = function(Value)
+       if Value then
+           local VirtualUser = game:GetService("VirtualUser")
+           AntiAfkConnection = game:GetService("Players").LocalPlayer.Idled:Connect(function()
+               VirtualUser:CaptureController()
+               VirtualUser:ClickButton2(Vector2.new())
+           end)
+           Rayfield:Notify({Title = "Anti-AFK", Content = "تم تفعيل حماية الخمول!"})
+       else
+           if AntiAfkConnection then
+               AntiAfkConnection:Disconnect()
+               AntiAfkConnection = nil
+           end
+           Rayfield:Notify({Title = "Anti-AFK", Content = "تم إيقاف حماية الخمول."})
+       end
+   end,
+})
+
+MainTab:CreateSection("مشكلة: تجميد الاتصال وضياع بيانات النشاط")
+local KeepAliveActive = false
+MainTab:CreateToggle({
+   Name = "🔧 حل مشكلة تجميد البيانات (Keep-Alive Ping)",
+   CurrentValue = false,
+   Callback = function(Value)
+       KeepAliveActive = Value
+       if Value then
+           Rayfield:Notify({Title = "Keep-Alive", Content = "تم تفعيل التحديث الدائم لنشاط الحساب!"})
+           task.spawn(function()
+               while KeepAliveActive do
+                   local char = game.Players.LocalPlayer.Character
+                   if char and char:FindFirstChild("Humanoid") then
+                       char.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                   end
+                   task.wait(45)
+               end
+           end)
+       else
+           Rayfield:Notify({Title = "Keep-Alive", Content = "تم إيقاف التحديث الدائم."})
+       end
+   end,
+})
+
+MainTab:CreateSection("مشكلة: الانقطاع المفاجئ عن السيرفر")
+local AutoRejoinConnection = nil
+MainTab:CreateToggle({
+   Name = "🔧 حل مشكلة انقطاع الشبكة (Auto-Rejoin Fix)",
+   CurrentValue = false,
+   Callback = function(Value)
+       if Value then
+           AutoRejoinConnection = game:GetService("GuiService").ErrorMessageChanged:Connect(function()
+               task.wait(2)
+               game:GetService("TeleportService"):Teleport(game.PlaceId, game.Players.LocalPlayer)
+           end)
+           Rayfield:Notify({Title = "Auto-Rejoin", Content = "تم تفعيل ميزة إعادة الاتصال التلقائي!"})
+       else
+           if AutoRejoinConnection then
+               AutoRejoinConnection:Disconnect()
+               AutoRejoinConnection = nil
+           end
+           Rayfield:Notify({Title = "Auto-Rejoin", Content = "تم إيقاف ميزة إعادة الاتصال."})
+       end
+   end,
+})
+
+---------------------------------------------------------
+-- 3. تبويب حماية الكيك الخارقة
+---------------------------------------------------------
+DefenseTab:CreateSection("حماية الحساب من الطرد البرمجي (Anti-Kick Guard)")
+local AntiKickHookEnabled = false
+local OldNamecall = nil
+
+DefenseTab:CreateToggle({
+   Name = "🛡️ درع حماية الكيك الخارق (Anti-Kick)",
+   CurrentValue = false,
+   Callback = function(Value)
+       AntiKickHookEnabled = Value
+       if Value then
+           if not OldNamecall and hookmetamethod then
+               OldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+                   local method = getnamecallmethod()
+                   if AntiKickHookEnabled and (method == "Kick" or method == "kick") then
+                       Rayfield:Notify({Title = "درع سواد 🛡️", Content = "تم منع محاولة طرد الحساب (Kick)!"})
+                       return nil
+                   end
+                   return OldNamecall(self, ...)
+               end)
+           end
+           Rayfield:Notify({Title = "حماية الكيك", Content = "تم تفعيل الدرع ضد الكيك البرمجي!"})
+       else
+           Rayfield:Notify({Title = "حماية الكيك", Content = "تم إيقاف درع حماية الكيك."})
+       end
+   end,
+})
