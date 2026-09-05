@@ -2,30 +2,116 @@ local Players = game:GetService("Players")
 local localPlayer = Players.LocalPlayer
 
 -- إزالة أي واجهة قديمة
-local oldGui = localPlayer.PlayerGui:FindFirstChild("EditEhtsabGui")
+local oldGui = localPlayer.PlayerGui:FindFirstChild("MEhtsabGui")
 if oldGui then oldGui:Destroy() end
 
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "EditEhtsabGui"
+screenGui.Name = "MEhtsabGui"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = localPlayer:WaitForChild("PlayerGui")
 
--- زر الإخفاء والإظهار الصغير
-local toggleBtn = Instance.new("TextButton")
-toggleBtn.Size = UDim2.new(0, 80, 0, 30)
-toggleBtn.Position = UDim2.new(0.02, 0, 0.15, 0)
-toggleBtn.Text = "إخفاء 👁️"
-toggleBtn.BackgroundColor3 = Color3.fromRGB(150, 30, 220)
-toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-toggleBtn.Font = Enum.Font.SourceSansBold
-toggleBtn.TextSize = 14
-toggleBtn.Parent = screenGui
+-- 1. زر M الدائري الأسود (لإخفاء/إظهار الواجهة بالكامل)
+local mButton = Instance.new("TextButton")
+mButton.Size = UDim2.new(0, 45, 0, 45)
+mButton.Position = UDim2.new(0.02, 0, 0.35, 0)
+mButton.Text = "M"
+mButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+mButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+mButton.Font = Enum.Font.SourceSansBold
+mButton.TextSize = 24
+mButton.Active = true
+mButton.Draggable = true
+mButton.Parent = screenGui
 
-local toggleCorner = Instance.new("UICorner")
-toggleCorner.CornerRadius = UDim.new(0, 8)
-toggleCorner.Parent = toggleBtn
+local mCorner = Instance.new("UICorner")
+mCorner.CornerRadius = UDim.new(1, 0)
+mCorner.Parent = mButton
 
--- الإطار الرئيسي
+local mStroke = Instance.new("UIStroke")
+mStroke.Color = Color3.fromRGB(80, 80, 80)
+mStroke.Thickness = 2
+mStroke.Parent = mButton
+
+-- 2. زر منفصل لإظهار/إخفاء أدوات تعديل الخصوم
+local toggleEditBtn = Instance.new("TextButton")
+toggleEditBtn.Size = UDim2.new(0, 110, 0, 30)
+toggleEditBtn.Position = UDim2.new(0.02, 0, 0.43, 0)
+toggleEditBtn.Text = "تعديل الخصوم: مفعّل"
+toggleEditBtn.BackgroundColor3 = Color3.fromRGB(60, 20, 90)
+toggleEditBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleEditBtn.Font = Enum.Font.SourceSansBold
+toggleEditBtn.TextSize = 12
+toggleEditBtn.Active = true
+toggleEditBtn.Draggable = true
+toggleEditBtn.Parent = screenGui
+
+local tEditCorner = Instance.new("UICorner")
+tEditCorner.CornerRadius = UDim.new(0, 8)
+tEditCorner.Parent = toggleEditBtn
+
+local tEditStroke = Instance.new("UIStroke")
+tEditStroke.Color = Color3.fromRGB(150, 30, 220)
+tEditStroke.Thickness = 1.5
+tEditStroke.Parent = toggleEditBtn
+
+-- 3. زر ثالث منفصل لتعديل وقتك الخاص 😂
+local myTimeEditBtn = Instance.new("TextButton")
+myTimeEditBtn.Size = UDim2.new(0, 110, 0, 30)
+myTimeEditBtn.Position = UDim2.new(0.02, 0, 0.49, 0)
+myTimeEditBtn.Text = "⏱️ تعديل وقتي"
+myTimeEditBtn.BackgroundColor3 = Color3.fromRGB(20, 80, 90)
+myTimeEditBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+myTimeEditBtn.Font = Enum.Font.SourceSansBold
+myTimeEditBtn.TextSize = 12
+myTimeEditBtn.Active = true
+myTimeEditBtn.Draggable = true
+myTimeEditBtn.Parent = screenGui
+
+local myTimeCorner = Instance.new("UICorner")
+myTimeCorner.CornerRadius = UDim.new(0, 8)
+myTimeCorner.Parent = myTimeEditBtn
+
+local myTimeStroke = Instance.new("UIStroke")
+myTimeStroke.Color = Color3.fromRGB(30, 200, 220)
+myTimeStroke.Thickness = 1.5
+myTimeStroke.Parent = myTimeEditBtn
+
+-- نافذة إدخال الوقت الخاص بك (تظهر عند ضغط الزر الثالث)
+local timeInputFrame = Instance.new("Frame")
+timeInputFrame.Size = UDim2.new(0, 200, 0, 80)
+timeInputFrame.Position = UDim2.new(0.14, 0, 0.49, 0)
+timeInputFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 35)
+timeInputFrame.Visible = false
+timeInputFrame.Active = true
+timeInputFrame.Draggable = true
+timeInputFrame.Parent = screenGui
+
+local tiCorner = Instance.new("UICorner")
+tiCorner.CornerRadius = UDim.new(0, 8)
+tiCorner.Parent = timeInputFrame
+
+local tiBox = Instance.new("TextBox")
+tiBox.Size = UDim2.new(0, 110, 0, 28)
+tiBox.Position = UDim2.new(0.08, 0, 0.3, 0)
+tiBox.PlaceholderText = "الوقت بالدقائق"
+tiBox.Text = ""
+tiBox.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+tiBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+tiBox.Font = Enum.Font.SourceSans
+tiBox.TextSize = 12
+tiBox.Parent = timeInputFrame
+
+local tiSetBtn = Instance.new("TextButton")
+tiSetBtn.Size = UDim2.new(0, 50, 0, 28)
+tiSetBtn.Position = UDim2.new(0.68, 0, 0.3, 0)
+tiSetBtn.Text = "حفظ"
+tiSetBtn.BackgroundColor3 = Color3.fromRGB(30, 160, 180)
+tiSetBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+tiSetBtn.Font = Enum.Font.SourceSansBold
+tiSetBtn.TextSize = 13
+tiSetBtn.Parent = timeInputFrame
+
+-- الإطار الرئيسي للواجهة
 local mainFrame = Instance.new("Frame")
 mainFrame.Size = UDim2.new(0, 420, 0, 320)
 mainFrame.Position = UDim2.new(0.5, -210, 0.25, 0)
@@ -39,21 +125,16 @@ local corner = Instance.new("UICorner")
 corner.CornerRadius = UDim.new(0, 12)
 corner.Parent = mainFrame
 
--- ربط زر الإخفاء باللوحة
-toggleBtn.MouseButton1Click:Connect(function()
+-- ربط زر M
+mButton.MouseButton1Click:Connect(function()
 	mainFrame.Visible = not mainFrame.Visible
-	if mainFrame.Visible then
-		toggleBtn.Text = "إخفاء 👁️"
-	else
-		toggleBtn.Text = "إظهار 👁️"
-	end
 end)
 
 -- العنوان الرئيسي
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0, 28)
 title.Position = UDim2.new(0, 0, 0.02, 0)
-title.Text = "إحتساب وتعديل النقاط"
+title.Text = "إحتساب النقاط"
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
 title.Font = Enum.Font.SourceSansBold
 title.TextSize = 22
@@ -130,6 +211,7 @@ listLayout.Parent = scrollList
 -- إدارة البيانات
 local trackedPlayers = {}
 local mySeconds = 0
+local showEditTools = true
 
 local function formatTime(sec)
 	local hrs = math.floor(sec / 3600)
@@ -138,12 +220,49 @@ local function formatTime(sec)
 	return string.format("%02d:%02d:%02d", hrs, mins, secs)
 end
 
--- إضافة لاعب مع أزرار التعديل اليدوي
+-- إظهار/إخفاء نافذة تعديل الوقت الخاص بك
+myTimeEditBtn.MouseButton1Click:Connect(function()
+	timeInputFrame.Visible = not timeInputFrame.Visible
+end)
+
+-- حفظ الوقت المعدل لك
+tiSetBtn.MouseButton1Click:Connect(function()
+	local mins = tonumber(tiBox.Text)
+	if mins then
+		mySeconds = mins * 60 -- يحول الدقائق إلى ثوانٍ
+		myTimeLabel.Text = "مدة بقائك : " .. formatTime(mySeconds)
+		tiBox.Text = ""
+		timeInputFrame.Visible = false
+	end
+end)
+
+-- التحكم بأداة التعديل للخصوم
+toggleEditBtn.MouseButton1Click:Connect(function()
+	showEditTools = not showEditTools
+	if showEditTools then
+		toggleEditBtn.Text = "تعديل الخصوم: مفعّل"
+		toggleEditBtn.BackgroundColor3 = Color3.fromRGB(60, 20, 90)
+	else
+		toggleEditBtn.Text = "تعديل الخصوم: مخفي"
+		toggleEditBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+	end
+	
+	for _, data in pairs(trackedPlayers) do
+		data.editFrame.Visible = showEditTools
+		if showEditTools then
+			data.cardFrame.Size = UDim2.new(1, -8, 0, 78)
+		else
+			data.cardFrame.Size = UDim2.new(1, -8, 0, 50)
+		end
+	end
+end)
+
+-- إضافة لاعب
 local function addPlayerToTrack(plr)
 	if trackedPlayers[plr.UserId] then return end
 	
 	local card = Instance.new("Frame")
-	card.Size = UDim2.new(1, -8, 0, 75)
+	card.Size = showEditTools and UDim2.new(1, -8, 0, 78) or UDim2.new(1, -8, 0, 50)
 	card.BackgroundColor3 = Color3.fromRGB(22, 6, 35)
 	card.BorderSizePixel = 0
 	card.Parent = scrollList
@@ -154,7 +273,7 @@ local function addPlayerToTrack(plr)
 
 	-- الصورة
 	local avatarImg = Instance.new("ImageLabel")
-	avatarImg.Size = UDim2.new(0, 38, 0, 38)
+	avatarImg.Size = UDim2.new(0, 36, 0, 36)
 	avatarImg.Position = UDim2.new(0.03, 0, 0.1, 0)
 	avatarImg.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 	avatarImg.BackgroundTransparency = 1
@@ -192,27 +311,45 @@ local function addPlayerToTrack(plr)
 	pStatsLabel.BackgroundTransparency = 1
 	pStatsLabel.Parent = card
 
-	-- أدوات تعديل النقاط والدخول يدوياً
-	local editBox = Instance.new("TextBox")
-	editBox.Size = UDim2.new(0, 70, 0, 20)
-	editBox.Position = UDim2.new(0.18, 0, 0.62, 0)
-	editBox.PlaceholderText = "تعديل دخول"
-	editBox.Text = ""
-	editBox.BackgroundColor3 = Color3.fromRGB(50, 20, 75)
-	editBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-	editBox.Font = Enum.Font.SourceSans
-	editBox.TextSize = 11
-	editBox.Parent = card
+	-- إطار أداة التعديل
+	local editFrame = Instance.new("Frame")
+	editFrame.Size = UDim2.new(0.8, 0, 0, 24)
+	editFrame.Position = UDim2.new(0.18, 0, 0.62, 0)
+	editFrame.BackgroundTransparency = 1
+	editFrame.Visible = showEditTools
+	editFrame.Parent = card
+
+	local joinBox = Instance.new("TextBox")
+	joinBox.Size = UDim2.new(0, 55, 0, 20)
+	joinBox.Position = UDim2.new(0, 0, 0, 0)
+	joinBox.PlaceholderText = "دخول"
+	joinBox.Text = ""
+	joinBox.BackgroundColor3 = Color3.fromRGB(50, 20, 75)
+	joinBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+	joinBox.Font = Enum.Font.SourceSans
+	joinBox.TextSize = 11
+	joinBox.Parent = editFrame
+
+	local leaveBox = Instance.new("TextBox")
+	leaveBox.Size = UDim2.new(0, 55, 0, 20)
+	leaveBox.Position = UDim2.new(0, 62, 0, 0)
+	leaveBox.PlaceholderText = "خروج"
+	leaveBox.Text = ""
+	leaveBox.BackgroundColor3 = Color3.fromRGB(50, 20, 75)
+	leaveBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+	leaveBox.Font = Enum.Font.SourceSans
+	leaveBox.TextSize = 11
+	leaveBox.Parent = editFrame
 
 	local setBtn = Instance.new("TextButton")
 	setBtn.Size = UDim2.new(0, 45, 0, 20)
-	setBtn.Position = UDim2.new(0.40, 0, 0.62, 0)
+	setBtn.Position = UDim2.new(0, 124, 0, 0)
 	setBtn.Text = "حفظ"
 	setBtn.BackgroundColor3 = Color3.fromRGB(120, 30, 180)
 	setBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 	setBtn.Font = Enum.Font.SourceSansBold
 	setBtn.TextSize = 11
-	setBtn.Parent = card
+	setBtn.Parent = editFrame
 
 	-- زر حذف ❌
 	local delBtn = Instance.new("TextButton")
@@ -232,6 +369,7 @@ local function addPlayerToTrack(plr)
 		seconds = 0,
 		isOnline = true,
 		cardFrame = card,
+		editFrame = editFrame,
 		nameLabel = pNameLabel,
 		statsLabel = pStatsLabel
 	}
@@ -240,12 +378,13 @@ local function addPlayerToTrack(plr)
 
 	-- حفظ التعديل اليدوي
 	setBtn.MouseButton1Click:Connect(function()
-		local num = tonumber(editBox.Text)
-		if num then
-			data.joinCount = num
-			data.statsLabel.Text = string.format("دخول: %d | خروج: %d | مدة: %s", data.joinCount, data.leaveCount, formatTime(data.seconds))
-			editBox.Text = ""
-		end
+		local newJoin = tonumber(joinBox.Text)
+		local newLeave = tonumber(leaveBox.Text)
+		if newJoin then data.joinCount = newJoin end
+		if newLeave then data.leaveCount = newLeave end
+		data.statsLabel.Text = string.format("دخول: %d | خروج: %d | مدة: %s", data.joinCount, data.leaveCount, formatTime(data.seconds))
+		joinBox.Text = ""
+		leaveBox.Text = ""
 	end)
 
 	delBtn.MouseButton1Click:Connect(function()
