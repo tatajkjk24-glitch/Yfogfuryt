@@ -1,0 +1,296 @@
+local Players = game:GetService("Players")
+local localPlayer = Players.LocalPlayer
+
+-- إزالة أي واجهة قديمة
+local oldGui = localPlayer.PlayerGui:FindFirstChild("EditEhtsabGui")
+if oldGui then oldGui:Destroy() end
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "EditEhtsabGui"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = localPlayer:WaitForChild("PlayerGui")
+
+-- زر الإخفاء والإظهار الصغير
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.new(0, 80, 0, 30)
+toggleBtn.Position = UDim2.new(0.02, 0, 0.15, 0)
+toggleBtn.Text = "إخفاء 👁️"
+toggleBtn.BackgroundColor3 = Color3.fromRGB(150, 30, 220)
+toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleBtn.Font = Enum.Font.SourceSansBold
+toggleBtn.TextSize = 14
+toggleBtn.Parent = screenGui
+
+local toggleCorner = Instance.new("UICorner")
+toggleCorner.CornerRadius = UDim.new(0, 8)
+toggleCorner.Parent = toggleBtn
+
+-- الإطار الرئيسي
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 420, 0, 320)
+mainFrame.Position = UDim2.new(0.5, -210, 0.25, 0)
+mainFrame.BackgroundColor3 = Color3.fromRGB(32, 5, 48)
+mainFrame.BorderSizePixel = 0
+mainFrame.Active = true
+mainFrame.Draggable = true
+mainFrame.Parent = screenGui
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 12)
+corner.Parent = mainFrame
+
+-- ربط زر الإخفاء باللوحة
+toggleBtn.MouseButton1Click:Connect(function()
+	mainFrame.Visible = not mainFrame.Visible
+	if mainFrame.Visible then
+		toggleBtn.Text = "إخفاء 👁️"
+	else
+		toggleBtn.Text = "إظهار 👁️"
+	end
+end)
+
+-- العنوان الرئيسي
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 28)
+title.Position = UDim2.new(0, 0, 0.02, 0)
+title.Text = "إحتساب وتعديل النقاط"
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.Font = Enum.Font.SourceSansBold
+title.TextSize = 22
+title.BackgroundTransparency = 1
+title.Parent = mainFrame
+
+-- الحقوق
+local subTitle = Instance.new("TextLabel")
+subTitle.Size = UDim2.new(1, 0, 0, 16)
+subTitle.Position = UDim2.new(0, 0, 0.11, 0)
+subTitle.Text = "by mourd1123"
+subTitle.TextColor3 = Color3.fromRGB(160, 120, 210)
+subTitle.Font = Enum.Font.SourceSansBold
+subTitle.TextSize = 13
+subTitle.BackgroundTransparency = 1
+subTitle.Parent = mainFrame
+
+-- مدة بقائك العامة
+local myTimeLabel = Instance.new("TextLabel")
+myTimeLabel.Size = UDim2.new(1, 0, 0, 20)
+myTimeLabel.Position = UDim2.new(0, 0, 0.17, 0)
+myTimeLabel.Text = "مدة بقائك : 00:00:00"
+myTimeLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+myTimeLabel.Font = Enum.Font.SourceSansBold
+myTimeLabel.TextSize = 16
+myTimeLabel.BackgroundTransparency = 1
+myTimeLabel.Parent = mainFrame
+
+-- مربع البحث والإضافة
+local nameInput = Instance.new("TextBox")
+nameInput.Size = UDim2.new(0.62, 0, 0, 32)
+nameInput.Position = UDim2.new(0.06, 0, 0.25, 0)
+nameInput.PlaceholderText = "اكتب أول حرفين..."
+nameInput.Text = ""
+nameInput.BackgroundColor3 = Color3.fromRGB(60, 18, 90)
+nameInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+nameInput.Font = Enum.Font.SourceSansBold
+nameInput.TextSize = 16
+nameInput.Parent = mainFrame
+
+local inCorner = Instance.new("UICorner")
+inCorner.CornerRadius = UDim.new(0, 8)
+inCorner.Parent = nameInput
+
+-- زر "بدأ"
+local startBtn = Instance.new("TextButton")
+startBtn.Size = UDim2.new(0.22, 0, 0, 32)
+startBtn.Position = UDim2.new(0.72, 0, 0.25, 0)
+startBtn.Text = "بدأ"
+startBtn.BackgroundColor3 = Color3.fromRGB(150, 30, 220)
+startBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+startBtn.Font = Enum.Font.SourceSansBold
+startBtn.TextSize = 18
+startBtn.Parent = mainFrame
+
+local btnCorner = Instance.new("UICorner")
+btnCorner.CornerRadius = UDim.new(0, 8)
+btnCorner.Parent = startBtn
+
+-- قائمة التمرير
+local scrollList = Instance.new("ScrollingFrame")
+scrollList.Size = UDim2.new(0.88, 0, 0.60, 0)
+scrollList.Position = UDim2.new(0.06, 0, 0.37, 0)
+scrollList.BackgroundTransparency = 1
+scrollList.BorderSizePixel = 0
+scrollList.ScrollBarThickness = 6
+scrollList.Parent = mainFrame
+
+local listLayout = Instance.new("UIListLayout")
+listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+listLayout.Padding = UDim.new(0, 8)
+listLayout.Parent = scrollList
+
+-- إدارة البيانات
+local trackedPlayers = {}
+local mySeconds = 0
+
+local function formatTime(sec)
+	local hrs = math.floor(sec / 3600)
+	local mins = math.floor((sec % 3600) / 60)
+	local secs = math.floor(sec % 60)
+	return string.format("%02d:%02d:%02d", hrs, mins, secs)
+end
+
+-- إضافة لاعب مع أزرار التعديل اليدوي
+local function addPlayerToTrack(plr)
+	if trackedPlayers[plr.UserId] then return end
+	
+	local card = Instance.new("Frame")
+	card.Size = UDim2.new(1, -8, 0, 75)
+	card.BackgroundColor3 = Color3.fromRGB(22, 6, 35)
+	card.BorderSizePixel = 0
+	card.Parent = scrollList
+
+	local cardCorner = Instance.new("UICorner")
+	cardCorner.CornerRadius = UDim.new(0, 8)
+	cardCorner.Parent = card
+
+	-- الصورة
+	local avatarImg = Instance.new("ImageLabel")
+	avatarImg.Size = UDim2.new(0, 38, 0, 38)
+	avatarImg.Position = UDim2.new(0.03, 0, 0.1, 0)
+	avatarImg.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+	avatarImg.BackgroundTransparency = 1
+	avatarImg.Parent = card
+
+	local imgCorner = Instance.new("UICorner")
+	imgCorner.CornerRadius = UDim.new(1, 0)
+	imgCorner.Parent = avatarImg
+
+	task.spawn(function()
+		avatarImg.Image = Players:GetUserThumbnailAsync(plr.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size420x420)
+	end)
+
+	-- الاسم
+	local pNameLabel = Instance.new("TextLabel")
+	pNameLabel.Size = UDim2.new(0.65, 0, 0, 18)
+	pNameLabel.Position = UDim2.new(0.18, 0, 0.08, 0)
+	pNameLabel.Text = plr.Name
+	pNameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+	pNameLabel.Font = Enum.Font.SourceSansBold
+	pNameLabel.TextSize = 15
+	pNameLabel.TextXAlignment = Enum.TextXAlignment.Left
+	pNameLabel.BackgroundTransparency = 1
+	pNameLabel.Parent = card
+
+	-- العدادات
+	local pStatsLabel = Instance.new("TextLabel")
+	pStatsLabel.Size = UDim2.new(0.65, 0, 0, 16)
+	pStatsLabel.Position = UDim2.new(0.18, 0, 0.32, 0)
+	pStatsLabel.Text = "دخول: 0 | خروج: 0 | مدة: 00:00:00"
+	pStatsLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+	pStatsLabel.Font = Enum.Font.SourceSans
+	pStatsLabel.TextSize = 12
+	pStatsLabel.TextXAlignment = Enum.TextXAlignment.Left
+	pStatsLabel.BackgroundTransparency = 1
+	pStatsLabel.Parent = card
+
+	-- أدوات تعديل النقاط والدخول يدوياً
+	local editBox = Instance.new("TextBox")
+	editBox.Size = UDim2.new(0, 70, 0, 20)
+	editBox.Position = UDim2.new(0.18, 0, 0.62, 0)
+	editBox.PlaceholderText = "تعديل دخول"
+	editBox.Text = ""
+	editBox.BackgroundColor3 = Color3.fromRGB(50, 20, 75)
+	editBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+	editBox.Font = Enum.Font.SourceSans
+	editBox.TextSize = 11
+	editBox.Parent = card
+
+	local setBtn = Instance.new("TextButton")
+	setBtn.Size = UDim2.new(0, 45, 0, 20)
+	setBtn.Position = UDim2.new(0.40, 0, 0.62, 0)
+	setBtn.Text = "حفظ"
+	setBtn.BackgroundColor3 = Color3.fromRGB(120, 30, 180)
+	setBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+	setBtn.Font = Enum.Font.SourceSansBold
+	setBtn.TextSize = 11
+	setBtn.Parent = card
+
+	-- زر حذف ❌
+	local delBtn = Instance.new("TextButton")
+	delBtn.Size = UDim2.new(0, 24, 0, 24)
+	delBtn.Position = UDim2.new(0.88, 0, 0.10, 0)
+	delBtn.Text = "❌"
+	delBtn.TextColor3 = Color3.fromRGB(255, 60, 60)
+	delBtn.BackgroundTransparency = 1
+	delBtn.Font = Enum.Font.SourceSansBold
+	delBtn.TextSize = 14
+	delBtn.Parent = card
+
+	local data = {
+		player = plr,
+		joinCount = 0,
+		leaveCount = 0,
+		seconds = 0,
+		isOnline = true,
+		cardFrame = card,
+		nameLabel = pNameLabel,
+		statsLabel = pStatsLabel
+	}
+
+	trackedPlayers[plr.UserId] = data
+
+	-- حفظ التعديل اليدوي
+	setBtn.MouseButton1Click:Connect(function()
+		local num = tonumber(editBox.Text)
+		if num then
+			data.joinCount = num
+			data.statsLabel.Text = string.format("دخول: %d | خروج: %d | مدة: %s", data.joinCount, data.leaveCount, formatTime(data.seconds))
+			editBox.Text = ""
+		end
+	end)
+
+	delBtn.MouseButton1Click:Connect(function()
+		trackedPlayers[plr.UserId] = nil
+		card:Destroy()
+	end)
+end
+
+-- البحث والإضافة
+startBtn.MouseButton1Click:Connect(function()
+	local text = nameInput.Text:lower()
+	if #text == 0 then return end
+	
+	for _, p in pairs(Players:GetPlayers()) do
+		if p.Name:lower():sub(1, #text) == text or p.DisplayName:lower():sub(1, #text) == text then
+			addPlayerToTrack(p)
+			nameInput.Text = ""
+			break
+		end
+	end
+end)
+
+-- العداد المستمر
+task.spawn(function()
+	while task.wait(1) do
+		mySeconds = mySeconds + 1
+		myTimeLabel.Text = "مدة بقائك : " .. formatTime(mySeconds)
+
+		for id, data in pairs(trackedPlayers) do
+			if Players:FindFirstChild(data.player.Name) then
+				if not data.isOnline then
+					data.isOnline = true
+					data.joinCount = data.joinCount + 1
+				end
+				data.seconds = data.seconds + 1
+				data.nameLabel.Text = data.player.Name
+				data.statsLabel.Text = string.format("دخول: %d | خروج: %d | مدة: %s", data.joinCount, data.leaveCount, formatTime(data.seconds))
+			else
+				if data.isOnline then
+					data.isOnline = false
+					data.leaveCount = data.leaveCount + 1
+				end
+				data.nameLabel.Text = data.player.Name .. " (خرج)"
+				data.statsLabel.Text = string.format("دخول: %d | خروج: %d | مدة: %s", data.joinCount, data.leaveCount, formatTime(data.seconds))
+			end
+		end
+	end
+end)
