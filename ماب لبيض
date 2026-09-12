@@ -2,3 +2,5 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/AhmadV99/Speed-Hub-X/
 
 
 loadstring(game:HttpGet("https://hoshihub.site/loader.lua
+
+loadstring(game:HttpGet("https://raw.githubusercontent.com/joustingmatch/Ouroboros/main/loader.lua"))()
