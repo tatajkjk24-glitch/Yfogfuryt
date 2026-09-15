@@ -1,0 +1,240 @@
+-- ═══════════════════════════════════════
+-- 🔴 غيّر هذا الرابط فقط:
+local SERVER = "https://your-repl.repl.co"
+-- ═══════════════════════════════════════
+
+local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
+local Http = game:GetService("HttpService")
+local UIS = game:GetService("UserInputService")
+local lp = Players.LocalPlayer
+
+if CoreGui:FindFirstChild("ChatUI") then CoreGui.ChatUI:Destroy() end
+
+-- HTTP
+local function req(opt)
+    if typeof(request) == "function" then
+        local r = request(opt); return r.Body or r
+    elseif typeof(http_request) == "function" then
+        local r = http_request(opt); return r.Body or r
+    end
+    if opt.Method == "GET" then return game:HttpGet(opt.Url) end
+end
+
+-- واجهة
+local gui = Instance.new("ScreenGui")
+gui.Name = "ChatUI"
+gui.ResetOnSpawn = false
+gui.Parent = CoreGui
+
+local main = Instance.new("Frame", gui)
+main.Size = UDim2.new(0, 340, 0, 320)
+main.Position = UDim2.new(0, 20, 0.5, -160)
+main.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+main.BorderSizePixel = 0
+main.Active = true
+main.Draggable = true
+Instance.new("UICorner", main).CornerRadius = UDim.new(0, 8)
+
+-- شريط علوي
+local top = Instance.new("Frame", main)
+top.Size = UDim2.new(1, 0, 0, 30)
+top.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+top.BorderSizePixel = 0
+Instance.new("UICorner", top).CornerRadius = UDim.new(0, 8)
+
+local fix = Instance.new("Frame", top)
+fix.Size = UDim2.new(1, 0, 0, 10)
+fix.Position = UDim2.new(0, 0, 1, -10)
+fix.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+fix.BorderSizePixel = 0
+
+local title = Instance.new("TextLabel", top)
+title.Size = UDim2.new(1, -60, 1, 0)
+title.Position = UDim2.new(0, 12, 0, 0)
+title.BackgroundTransparency = 1
+title.Text = "Chat"
+title.TextColor3 = Color3.fromRGB(240, 240, 240)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 13
+title.TextXAlignment = Enum.TextXAlignment.Left
+
+local status = Instance.new("Frame", top)
+status.Size = UDim2.new(0, 8, 0, 8)
+status.Position = UDim2.new(1, -80, 0.5, -4)
+status.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+status.BorderSizePixel = 0
+Instance.new("UICorner", status).CornerRadius = UDim.new(1, 0)
+
+local close = Instance.new("TextButton", top)
+close.Size = UDim2.new(0, 22, 0, 22)
+close.Position = UDim2.new(1, -28, 0.5, -11)
+close.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+close.Text = "×"
+close.TextColor3 = Color3.fromRGB(255, 255, 255)
+close.Font = Enum.Font.GothamBold
+close.TextSize = 16
+close.Parent = top
+Instance.new("UICorner", close).CornerRadius = UDim.new(0, 4)
+
+close.MouseButton1Click:Connect(function() gui:Destroy() end)
+
+-- منطقة الرسائل
+local scroll = Instance.new("ScrollingFrame", main)
+scroll.Size = UDim2.new(1, -16, 1, -90)
+scroll.Position = UDim2.new(0, 8, 0, 38)
+scroll.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+scroll.BorderSizePixel = 0
+scroll.ScrollBarThickness = 3
+scroll.ScrollBarImageColor3 = Color3.fromRGB(80, 80, 80)
+scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+Instance.new("UICorner", scroll).CornerRadius = UDim.new(0, 6)
+
+local pad = Instance.new("UIPadding", scroll)
+pad.PaddingTop = UDim.new(0, 6)
+pad.PaddingBottom = UDim.new(0, 6)
+pad.PaddingLeft = UDim.new(0, 6)
+pad.PaddingRight = UDim.new(0, 6)
+
+local list = Instance.new("UIListLayout", scroll)
+list.Padding = UDim.new(0, 4)
+list.SortOrder = Enum.SortOrder.LayoutOrder
+
+-- حقل الإدخال
+local inputBox = Instance.new("Frame", main)
+inputBox.Size = UDim2.new(1, -16, 0, 36)
+inputBox.Position = UDim2.new(0, 8, 1, -44)
+inputBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+inputBox.BorderSizePixel = 0
+Instance.new("UICorner", inputBox).CornerRadius = UDim.new(0, 6)
+
+local txt = Instance.new("TextBox", inputBox)
+txt.Size = UDim2.new(1, -50, 1, 0)
+txt.Position = UDim2.new(0, 10, 0, 0)
+txt.BackgroundTransparency = 1
+txt.PlaceholderText = "Type message..."
+txt.PlaceholderColor3 = Color3.fromRGB(140, 140, 140)
+txt.Text = ""
+txt.TextColor3 = Color3.fromRGB(240, 240, 240)
+txt.Font = Enum.Font.Gotham
+txt.TextSize = 13
+txt.TextXAlignment = Enum.TextXAlignment.Left
+txt.ClearTextOnFocus = false
+
+local send = Instance.new("TextButton", inputBox)
+send.Size = UDim2.new(0, 34, 1, -8)
+send.Position = UDim2.new(1, -40, 0, 4)
+send.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
+send.Text = "➤"
+send.TextColor3 = Color3.fromRGB(255, 255, 255)
+send.Font = Enum.Font.GothamBold
+send.TextSize = 14
+Instance.new("UICorner", send).CornerRadius = UDim.new(0, 5)
+
+-- دالة إضافة رسالة
+local function addMsg(name, text, isSelf)
+    local f = Instance.new("Frame", scroll)
+    f.BackgroundTransparency = 1
+    f.Size = UDim2.new(1, 0, 0, 0)
+    f.AutomaticSize = Enum.AutomaticSize.Y
+    local l = Instance.new("UIListLayout", f)
+    l.Padding = UDim.new(0, 1)
+
+    local n = Instance.new("TextLabel", f)
+    n.Size = UDim2.new(1, 0, 0, 13)
+    n.BackgroundTransparency = 1
+    n.Text = name
+    n.TextColor3 = isSelf and Color3.fromRGB(120, 170, 255) or Color3.fromRGB(255, 180, 120)
+    n.Font = Enum.Font.GothamBold
+    n.TextSize = 10
+    n.TextXAlignment = Enum.TextXAlignment.Left
+
+    local b = Instance.new("Frame", f)
+    b.BackgroundColor3 = isSelf and Color3.fromRGB(50, 60, 90) or Color3.fromRGB(40, 40, 40)
+    b.BorderSizePixel = 0
+    b.AutomaticSize = Enum.AutomaticSize.Y
+    b.Size = UDim2.new(1, 0, 0, 0)
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 4)
+    local bp = Instance.new("UIPadding", b)
+    bp.PaddingTop = UDim.new(0, 5)
+    bp.PaddingBottom = UDim.new(0, 5)
+    bp.PaddingLeft = UDim.new(0, 7)
+    bp.PaddingRight = UDim.new(0, 7)
+
+    local t = Instance.new("TextLabel", b)
+    t.Size = UDim2.new(1, 0, 0, 0)
+    t.AutomaticSize = Enum.AutomaticSize.Y
+    t.BackgroundTransparency = 1
+    t.Text = text
+    t.TextColor3 = Color3.fromRGB(230, 230, 230)
+    t.Font = Enum.Font.Gotham
+    t.TextSize = 12
+    t.TextWrapped = true
+    t.TextXAlignment = Enum.TextXAlignment.Left
+    t.TextYAlignment = Enum.TextYAlignment.Top
+
+    task.defer(function()
+        task.wait()
+        scroll.CanvasPosition = Vector2.new(0, scroll.AbsoluteCanvasSize.Y)
+    end)
+end
+
+-- السيرفر
+local lastId = 0
+local online = false
+
+local function setStatus(on)
+    online = on
+    status.BackgroundColor3 = on and Color3.fromRGB(80, 220, 120) or Color3.fromRGB(200, 60, 60)
+end
+
+local function sendMsg(text)
+    addMsg(lp.Name, text, true)
+    task.spawn(function()
+        pcall(function()
+            req({
+                Url = SERVER .. "/send",
+                Method = "POST",
+                Headers = { ["Content-Type"] = "application/json" },
+                Body = Http:JSONEncode({ sender = lp.Name, text = text })
+            })
+        end)
+    end)
+end
+
+send.MouseButton1Click:Connect(function()
+    if #txt.Text > 0 then sendMsg(txt.Text); txt.Text = "" end
+end)
+
+txt.FocusLost:Connect(function(enter)
+    if enter and #txt.Text > 0 then sendMsg(txt.Text); txt.Text = "" end
+end)
+
+-- استقبال
+task.spawn(function()
+    while gui.Parent do
+        task.wait(1.5)
+        local ok, res = pcall(function()
+            return req({ Url = SERVER .. "/messages?since=" .. lastId, Method = "GET" })
+        end)
+        if ok and res and #res > 2 then
+            if not online then setStatus(true) end
+            local ok2, data = pcall(function() return Http:JSONDecode(res) end)
+            if ok2 and data.messages then
+                for _, m in ipairs(data.messages) do
+                    if m.id > lastId then
+                        lastId = m.id
+                        if m.sender ~= lp.Name then
+                            addMsg(m.sender, m.text, false)
+                        end
+                    end
+                end
+            end
+        else
+            if online then setStatus(false) end
+        end
+    end
+end)
+
+addMsg("System", "Connecting...", false)
