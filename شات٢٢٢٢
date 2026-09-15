@@ -1,0 +1,97 @@
+// ============================================
+// شات التائبون - السيرفر
+// Taiboun Chat Server
+// ============================================
+
+const express = require('express');
+const cors = require('cors');
+const app = express();
+
+app.use(cors());
+app.use(express.json());
+
+// تخزين الرسائل
+const messages = [];
+let counter = 0;
+const MAX_MESSAGES = 200;
+const MSG_LIFETIME = 5 * 60 * 1000; // 5 دقائق
+
+// ========== إرسال رسالة ==========
+app.post('/send', (req, res) => {
+    try {
+        const { sender, text } = req.body;
+        
+        if (!sender || !text) {
+            return res.status(400).json({ ok: false, error: 'missing fields' });
+        }
+        
+        counter++;
+        const msg = {
+            id: counter,
+            sender: String(sender).substring(0, 50),
+            text: String(text).substring(0, 300),
+            time: Date.now()
+        };
+        
+        messages.push(msg);
+        
+        // احتفظ بآخر 200 رسالة فقط
+        if (messages.length > MAX_MESSAGES) {
+            messages.shift();
+        }
+        
+        console.log(`[${msg.sender}] ${msg.text}`);
+        res.json({ ok: true, id: counter });
+        
+    } catch (e) {
+        console.error('Error:', e.message);
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+// ========== استلام الرسائل ==========
+app.get('/messages', (req, res) => {
+    try {
+        const since = parseInt(req.query.since) || 0;
+        const newMsgs = messages.filter(m => m.id > since);
+        res.json({ 
+            ok: true, 
+            messages: newMsgs,
+            total: messages.length
+        });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+// ========== فحص الاتصال ==========
+app.get('/', (req, res) => {
+    res.send('✅ Chat Server Working!');
+});
+
+// ========== حالة السيرفر ==========
+app.get('/status', (req, res) => {
+    res.json({
+        ok: true,
+        messages: messages.length,
+        uptime: Math.floor(process.uptime())
+    });
+});
+
+// تنظيف الرسائل القديمة
+setInterval(() => {
+    const now = Date.now();
+    while (messages.length > 0 && now - messages[0].time > MSG_LIFETIME) {
+        messages.shift();
+    }
+}, 30000);
+
+// ========== تشغيل السيرفر ==========
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log('==========================================');
+    console.log('🚀 Taiboun Chat Server Started');
+    console.log('📡 Port: ' + PORT);
+    console.log('⏰ Time: ' + new Date().toISOString());
+    console.log('==========================================');
+});
