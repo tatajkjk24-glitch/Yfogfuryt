@@ -1,6 +1,644 @@
 --[[
     ╔═══════════════════════════════════╗
     ║   شات التائبون | Taiboun Chat      ║
+    ║   نسخة السيرفر - تعمل بين الأجهزة  ║
+    ╚═══════════════════════════════════╝
+]]
+
+--============== ⚙️ الإعدادات ==============--
+local CONFIG = {
+    -- 🔴 ضع رابط سيرفرك هنا (بدون / في النهاية)
+    ServerURL        = "https://taiboun-chat.replit.app",
+    --                 ⬆️ غيّره لرابط سيرفرك
+
+    Title            = "شات التائبون",
+    MaxMessages      = 60,
+    Width            = 380,
+    Height           = 340,
+    ToggleKey        = Enum.KeyCode.RightControl,
+    PollInterval     = 1.5,        -- كل كم ثانية يفحص السيرفر
+    HeadMsgDuration  = 5,
+    HeadMsgMaxWidth  = 200,
+    HeadMsgOffset    = 4,
+    Colors = {
+        Background   = Color3.fromRGB(24, 26, 33),
+        TopBar       = Color3.fromRGB(32, 35, 45),
+        ChatArea     = Color3.fromRGB(18, 20, 26),
+        InputBg      = Color3.fromRGB(38, 42, 54),
+        Accent       = Color3.fromRGB(88, 101, 242),
+        TextPrimary  = Color3.fromRGB(235, 237, 245),
+        TextMuted    = Color3.fromRGB(130, 135, 150),
+        Border       = Color3.fromRGB(55, 60, 75),
+        MsgSelf      = Color3.fromRGB(45, 55, 85),
+        MsgOther     = Color3.fromRGB(35, 38, 48),
+        NameSelf     = Color3.fromRGB(120, 180, 255),
+        NameOther    = Color3.fromRGB(255, 180, 120),
+        System       = Color3.fromRGB(255, 210, 100),
+        HeadBg       = Color3.fromRGB(20, 22, 30),
+        Online       = Color3.fromRGB(80, 220, 120),
+        Offline      = Color3.fromRGB(220, 80, 80),
+    }
+}
+
+local Players            = game:GetService("Players")
+local CoreGui            = game:GetService("CoreGui")
+local TweenService       = game:GetService("TweenService")
+local UserInputService   = game:GetService("UserInputService")
+local HttpService        = game:GetService("HttpService")
+local lp                 = Players.LocalPlayer
+
+if CoreGui:FindFirstChild("DeltaChatUI") then
+    CoreGui.DeltaChatUI:Destroy()
+end
+
+--============== 📡 دالة HTTP ==============--
+local function httpRequest(opts)
+    -- دعم عدة تنفيذات
+    if typeof(request) == "function" then
+        local res = request(opts)
+        return res.Body or res.body or res
+    elseif typeof(http_request) == "function" then
+        local res = http_request(opts)
+        return res.Body or res.body or res
+    elseif typeof(syn) == "table" and syn.request then
+        local res = syn.request(opts)
+        return res.Body or res.body or res
+    else
+        -- احتياط: HttpGet فقط لـ GET
+        if opts.Method == "GET" then
+            return game:HttpGet(opts.Url)
+        end
+    end
+    return nil
+end
+
+--============== نظام الرأس ==============--
+local headMessages = {}
+local activeHeads = {}  -- يمنع التكرار
+
+local function createHeadBillboard(character)
+    if not character then return nil end
+    local head = character:FindFirstChild("Head")
+    if not head then return nil end
+
+    local old = head:FindFirstChild("DeltaHeadMsg")
+    if old then old:Destroy() end
+
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "DeltaHeadMsg"
+    billboard.Size = UDim2.new(0, CONFIG.HeadMsgMaxWidth, 0, 40)
+    billboard.StudsOffsetWorldSpace = Vector3.new(0, 2.5 + CONFIG.HeadMsgOffset, 0)
+    billboard.AlwaysOnTop = true
+    billboard.MaxDistance = 200
+    billboard.LightInfluence = 0
+    billboard.Parent = head
+
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, 0, 1, 0)
+    frame.BackgroundColor3 = CONFIG.Colors.HeadBg
+    frame.BackgroundTransparency = 0.15
+    frame.BorderSizePixel = 0
+    frame.Visible = false
+    frame.Parent = billboard
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
+
+    local stroke = Instance.new("UIStroke", frame)
+    stroke.Color = CONFIG.Colors.Accent
+    stroke.Thickness = 1.5
+
+    local padding = Instance.new("UIPadding", frame)
+    padding.PaddingTop = UDim.new(0, 6)
+    padding.PaddingBottom = UDim.new(0, 6)
+    padding.PaddingLeft = UDim.new(0, 10)
+    padding.PaddingRight = UDim.new(0, 10)
+
+    local label = Instance.new("TextLabel", frame)
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.BackgroundTransparency = 1
+    label.TextColor3 = CONFIG.Colors.TextPrimary
+    label.Font = Enum.Font.GothamBold
+    label.TextSize = 14
+    label.TextWrapped = true
+
+    headMessages[character] = billboard
+    return billboard
+end
+
+local function showHeadMessage(targetPlayer, text, duration)
+    if not targetPlayer or not targetPlayer.Character then return end
+    duration = duration or CONFIG.HeadMsgDuration
+
+    -- منع التكرار خلال فترة قصيرة
+    local now = tick()
+    if activeHeads[targetPlayer] and now - activeHeads[targetPlayer] < 0.5 then
+        return
+    end
+    activeHeads[targetPlayer] = now
+
+    local data = headMessages[targetPlayer.Character]
+    if not data or not data.Parent then
+        data = createHeadBillboard(targetPlayer.Character)
+        if not data then return end
+    end
+
+    local frame = data:FindFirstChildWhichIsA("Frame")
+    local label = frame and frame:FindFirstChildWhichIsA("TextLabel")
+    if not label then return end
+
+    label.Text = text
+    task.wait()
+    local tb = label.TextBounds
+    data.Size = UDim2.new(
+        0, math.clamp(tb.X + 30, 80, 400),
+        0, math.clamp(tb.Y + 20, 34, 120)
+    )
+
+    frame.Visible = true
+    frame.BackgroundTransparency = 1
+    frame.Position = UDim2.new(0, 0, 0, 8)
+    TweenService:Create(frame, TweenInfo.new(0.25, Enum.EasingStyle.Back), {
+        BackgroundTransparency = 0.15,
+        Position = UDim2.new(0, 0, 0, 0)
+    }):Play()
+
+    task.delay(duration, function()
+        if frame and frame.Parent then
+            local out = TweenService:Create(frame, TweenInfo.new(0.3), {
+                BackgroundTransparency = 1,
+                Position = UDim2.new(0, 0, 0, -8)
+            })
+            out:Play()
+            out.Completed:Connect(function()
+                if frame and frame.Parent then
+                    frame.Visible = false
+                end
+            end)
+        end
+    end)
+end
+
+local function setupPlayer(player)
+    if player.Character then
+        createHeadBillboard(player.Character)
+    end
+    player.CharacterAdded:Connect(function(char)
+        task.wait(0.5)
+        createHeadBillboard(char)
+    end)
+end
+
+for _, p in ipairs(Players:GetPlayers()) do setupPlayer(p) end
+Players.PlayerAdded:Connect(setupPlayer)
+
+--============== 🎨 الواجهة ==============--
+local gui = Instance.new("ScreenGui")
+gui.Name = "DeltaChatUI"
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true
+gui.Parent = CoreGui
+
+local main = Instance.new("Frame")
+main.Size = UDim2.new(0, CONFIG.Width, 0, CONFIG.Height)
+main.Position = UDim2.new(0, 30, 0.5, -CONFIG.Height / 2)
+main.BackgroundColor3 = CONFIG.Colors.Background
+main.BorderSizePixel = 0
+main.Active = true
+main.Draggable = true
+main.ClipsDescendants = true
+main.Parent = gui
+Instance.new("UICorner", main).CornerRadius = UDim.new(0, 12)
+
+local mainStroke = Instance.new("UIStroke", main)
+mainStroke.Color = CONFIG.Colors.Border
+mainStroke.Thickness = 1.5
+
+--===== الشريط العلوي =====--
+local topBar = Instance.new("Frame")
+topBar.Size = UDim2.new(1, 0, 0, 40)
+topBar.BackgroundColor3 = CONFIG.Colors.TopBar
+topBar.BorderSizePixel = 0
+topBar.ZIndex = 5
+topBar.Parent = main
+Instance.new("UICorner", topBar).CornerRadius = UDim.new(0, 12)
+
+local topBarFix = Instance.new("Frame")
+topBarFix.Size = UDim2.new(1, 0, 0, 14)
+topBarFix.Position = UDim2.new(0, 0, 1, -14)
+topBarFix.BackgroundColor3 = CONFIG.Colors.TopBar
+topBarFix.BorderSizePixel = 0
+topBarFix.ZIndex = 5
+topBarFix.Parent = topBar
+
+-- 🔴 نقطة الحالة (تتحول أخضر/أحمر حسب الاتصال)
+local dot = Instance.new("Frame")
+dot.Size = UDim2.new(0, 8, 0, 8)
+dot.Position = UDim2.new(0, 14, 0.5, -4)
+dot.BackgroundColor3 = CONFIG.Colors.Offline
+dot.BorderSizePixel = 0
+dot.ZIndex = 6
+dot.Parent = topBar
+Instance.new("UICorner", dot).CornerRadius = UDim.new(1, 0)
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, -100, 1, 0)
+title.Position = UDim2.new(0, 30, 0, 0)
+title.BackgroundTransparency = 1
+title.Text = CONFIG.Title .. "  ⏳"
+title.TextColor3 = CONFIG.Colors.TextPrimary
+title.Font = Enum.Font.GothamBold
+title.TextSize = 14
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.ZIndex = 6
+title.Parent = topBar
+
+local minBtn = Instance.new("TextButton")
+minBtn.Size = UDim2.new(0, 26, 0, 26)
+minBtn.Position = UDim2.new(1, -64, 0.5, -13)
+minBtn.BackgroundColor3 = Color3.fromRGB(60, 65, 80)
+minBtn.Text = "—"
+minBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+minBtn.Font = Enum.Font.GothamBold
+minBtn.TextSize = 14
+minBtn.AutoButtonColor = false
+minBtn.ZIndex = 10
+minBtn.Parent = topBar
+Instance.new("UICorner", minBtn).CornerRadius = UDim.new(0, 6)
+
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 26, 0, 26)
+closeBtn.Position = UDim2.new(1, -34, 0.5, -13)
+closeBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+closeBtn.Text = "✕"
+closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.TextSize = 12
+closeBtn.AutoButtonColor = false
+closeBtn.ZIndex = 10
+closeBtn.Parent = topBar
+Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 6)
+
+local function addHover(btn, n, h)
+    btn.MouseEnter:Connect(function()
+        if btn.Text == "▣" then return end
+        TweenService:Create(btn, TweenInfo.new(0.15), { BackgroundColor3 = h }):Play()
+    end)
+    btn.MouseLeave:Connect(function()
+        if btn.Text == "▣" then return end
+        TweenService:Create(btn, TweenInfo.new(0.15), { BackgroundColor3 = n }):Play()
+    end)
+end
+addHover(minBtn, Color3.fromRGB(60, 65, 80), Color3.fromRGB(85, 90, 110))
+addHover(closeBtn, Color3.fromRGB(200, 60, 60), Color3.fromRGB(230, 80, 80))
+
+--===== منطقة الشات =====--
+local chatArea = Instance.new("Frame")
+chatArea.Size = UDim2.new(1, -20, 1, -100)
+chatArea.Position = UDim2.new(0, 10, 0, 50)
+chatArea.BackgroundColor3 = CONFIG.Colors.ChatArea
+chatArea.BorderSizePixel = 0
+chatArea.Parent = main
+Instance.new("UICorner", chatArea).CornerRadius = UDim.new(0, 8)
+
+local scroll = Instance.new("ScrollingFrame")
+scroll.Size = UDim2.new(1, 0, 1, 0)
+scroll.BackgroundTransparency = 1
+scroll.BorderSizePixel = 0
+scroll.ScrollBarThickness = 4
+scroll.ScrollBarImageColor3 = CONFIG.Colors.Border
+scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+scroll.Parent = chatArea
+
+local scrollPad = Instance.new("UIPadding", scroll)
+scrollPad.PaddingTop = UDim.new(0, 8)
+scrollPad.PaddingBottom = UDim.new(0, 8)
+scrollPad.PaddingLeft = UDim.new(0, 8)
+scrollPad.PaddingRight = UDim.new(0, 8)
+
+local listLayout = Instance.new("UIListLayout", scroll)
+listLayout.Padding = UDim.new(0, 6)
+listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+--===== حقل الإدخال =====--
+local inputFrame = Instance.new("Frame")
+inputFrame.Size = UDim2.new(1, -20, 0, 42)
+inputFrame.Position = UDim2.new(0, 10, 1, -52)
+inputFrame.BackgroundColor3 = CONFIG.Colors.InputBg
+inputFrame.BorderSizePixel = 0
+inputFrame.Parent = main
+Instance.new("UICorner", inputFrame).CornerRadius = UDim.new(0, 10)
+
+local inputStroke = Instance.new("UIStroke", inputFrame)
+inputStroke.Color = CONFIG.Colors.Border
+inputStroke.Thickness = 1
+
+local textBox = Instance.new("TextBox")
+textBox.Size = UDim2.new(1, -70, 1, 0)
+textBox.Position = UDim2.new(0, 14, 0, 0)
+textBox.BackgroundTransparency = 1
+textBox.PlaceholderText = "اكتب رسالتك هنا..."
+textBox.PlaceholderColor3 = CONFIG.Colors.TextMuted
+textBox.Text = ""
+textBox.TextColor3 = CONFIG.Colors.TextPrimary
+textBox.Font = Enum.Font.Gotham
+textBox.TextSize = 14
+textBox.TextXAlignment = Enum.TextXAlignment.Left
+textBox.ClearTextOnFocus = false
+textBox.Parent = inputFrame
+
+local sendBtn = Instance.new("TextButton")
+sendBtn.Size = UDim2.new(0, 30, 0, 30)
+sendBtn.Position = UDim2.new(1, -38, 0.5, -15)
+sendBtn.BackgroundColor3 = CONFIG.Colors.Accent
+sendBtn.Text = "➤"
+sendBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+sendBtn.Font = Enum.Font.GothamBold
+sendBtn.TextSize = 16
+sendBtn.AutoButtonColor = false
+sendBtn.Parent = inputFrame
+Instance.new("UICorner", sendBtn).CornerRadius = UDim.new(1, 0)
+addHover(sendBtn, CONFIG.Colors.Accent, Color3.fromRGB(110, 125, 255))
+
+textBox.Focused:Connect(function()
+    TweenService:Create(inputStroke, TweenInfo.new(0.2), { Color = CONFIG.Colors.Accent }):Play()
+end)
+textBox.FocusLost:Connect(function()
+    TweenService:Create(inputStroke, TweenInfo.new(0.2), { Color = CONFIG.Colors.Border }):Play()
+end)
+
+--============== إضافة رسالة ==============--
+local function addMessage(sender, text, msgType)
+    msgType = msgType or "other"
+
+    local msgs = {}
+    for _, child in ipairs(scroll:GetChildren()) do
+        if child:IsA("Frame") then table.insert(msgs, child) end
+    end
+    if #msgs >= CONFIG.MaxMessages then msgs[1]:Destroy() end
+
+    local msg = Instance.new("Frame")
+    msg.BackgroundTransparency = 1
+    msg.Size = UDim2.new(1, 0, 0, 0)
+    msg.AutomaticSize = Enum.AutomaticSize.Y
+    msg.Parent = scroll
+
+    local msgLayout = Instance.new("UIListLayout", msg)
+    msgLayout.Padding = UDim.new(0, 2)
+
+    local nameLabel = Instance.new("TextLabel", msg)
+    nameLabel.Size = UDim2.new(1, 0, 0, 14)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Font = Enum.Font.GothamBold
+    nameLabel.TextSize = 11
+    nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+    nameLabel.Text = sender
+    if msgType == "self" then
+        nameLabel.TextColor3 = CONFIG.Colors.NameSelf
+    elseif msgType == "system" then
+        nameLabel.TextColor3 = CONFIG.Colors.System
+    else
+        nameLabel.TextColor3 = CONFIG.Colors.NameOther
+    end
+
+    local bubble = Instance.new("Frame", msg)
+    bubble.BackgroundColor3 = msgType == "self" and CONFIG.Colors.MsgSelf
+        or msgType == "system" and Color3.fromRGB(60, 50, 30)
+        or CONFIG.Colors.MsgOther
+    bubble.BorderSizePixel = 0
+    bubble.AutomaticSize = Enum.AutomaticSize.Y
+    bubble.Size = UDim2.new(1, 0, 0, 0)
+    Instance.new("UICorner", bubble).CornerRadius = UDim.new(0, 6)
+
+    local bp = Instance.new("UIPadding", bubble)
+    bp.PaddingTop = UDim.new(0, 6)
+    bp.PaddingBottom = UDim.new(0, 6)
+    bp.PaddingLeft = UDim.new(0, 8)
+    bp.PaddingRight = UDim.new(0, 8)
+
+    local tl = Instance.new("TextLabel", bubble)
+    tl.Size = UDim2.new(1, 0, 0, 0)
+    tl.AutomaticSize = Enum.AutomaticSize.Y
+    tl.BackgroundTransparency = 1
+    tl.Text = text
+    tl.TextColor3 = CONFIG.Colors.TextPrimary
+    tl.Font = Enum.Font.Gotham
+    tl.TextSize = 13
+    tl.TextWrapped = true
+    tl.TextXAlignment = Enum.TextXAlignment.Left
+    tl.TextYAlignment = Enum.TextYAlignment.Top
+
+    task.defer(function()
+        task.wait(0.05)
+        TweenService:Create(scroll, TweenInfo.new(0.25), {
+            CanvasPosition = Vector2.new(0, math.max(0, scroll.AbsoluteCanvasSize.Y - scroll.AbsoluteWindowSize.Y))
+        }):Play()
+    end)
+end
+
+--============== 📡 نظام الاتصال بالسيرفر ==============--
+local lastSeenId = 0
+local connected = false
+local connectionCheckFailCount = 0
+
+local function setOnlineStatus(isOnline)
+    if isOnline then
+        TweenService:Create(dot, TweenInfo.new(0.3), {
+            BackgroundColor3 = CONFIG.Colors.Online
+        }):Play()
+        title.Text = CONFIG.Title .. "  🟢"
+    else
+        TweenService:Create(dot, TweenInfo.new(0.3), {
+            BackgroundColor3 = CONFIG.Colors.Offline
+        }):Play()
+        title.Text = CONFIG.Title .. "  🔴"
+    end
+end
+
+-- إرسال رسالة للسيرفر
+local function sendToServer(text)
+    local payload = HttpService:JSONEncode({
+        sender = lp.Name,
+        text = text,
+        time = math.floor(tick() * 1000)
+    })
+
+    task.spawn(function()
+        local ok, res = pcall(function()
+            return httpRequest({
+                Url = CONFIG.ServerURL .. "/send",
+                Method = "POST",
+                Headers = { ["Content-Type"] = "application/json" },
+                Body = payload
+            })
+        end)
+
+        if ok and res then
+            print("[Chat] ✅ أُرسلت:", text)
+        else
+            warn("[Chat] ❌ فشل الإرسال")
+        end
+    end)
+end
+
+-- استلام الرسائل الجديدة
+local function pollMessages()
+    while gui.Parent do
+        task.wait(CONFIG.PollInterval)
+
+        local url = CONFIG.ServerURL .. "/messages?since=" .. tostring(lastSeenId)
+        local ok, res = pcall(function()
+            return httpRequest({
+                Url = url,
+                Method = "GET"
+            })
+        end)
+
+        if ok and res and type(res) == "string" and #res > 2 then
+            connectionCheckFailCount = 0
+
+            if not connected then
+                connected = true
+                setOnlineStatus(true)
+            end
+
+            local decoded
+            local decOk = pcall(function()
+                decoded = HttpService:JSONDecode(res)
+            end)
+
+            if decOk and decoded and decoded.messages then
+                for _, m in ipairs(decoded.messages) do
+                    if m.id > lastSeenId then
+                        lastSeenId = m.id
+
+                        -- تجاهل رسائلي (سبق عرضتها)
+                        if m.sender ~= lp.Name then
+                            -- عرض في الشات
+                            addMessage(m.sender, m.text, "other")
+
+                            -- عرض فوق رأس اللاعب لو موجود
+                            local plr = Players:FindFirstChild(m.sender)
+                            if plr then
+                                showHeadMessage(plr, m.text)
+                            end
+                        end
+                    end
+                end
+            end
+        else
+            connectionCheckFailCount = connectionCheckFailCount + 1
+            if connectionCheckFailCount >= 3 and connected then
+                connected = false
+                setOnlineStatus(false)
+            end
+        end
+    end
+end
+
+--============== إرسال ==============--
+local lastSentTime = 0
+local function sendMessage(text)
+    if not text or #text == 0 then return end
+    text = text:gsub("^%s+", ""):gsub("%s+$", "")
+    if #text == 0 then return end
+
+    -- منع السبام (رسالة كل 0.5 ثانية)
+    local now = tick()
+    if now - lastSentTime < 0.5 then
+        return
+    end
+    lastSentTime = now
+
+    -- عرض فوري محلياً
+    addMessage(lp.Name .. " (أنت)", text, "self")
+    showHeadMessage(lp, text)
+
+    -- إرسال للسيرفر
+    sendToServer(text)
+end
+
+sendBtn.MouseButton1Click:Connect(function()
+    sendMessage(textBox.Text)
+    textBox.Text = ""
+end)
+
+textBox.FocusLost:Connect(function(enter)
+    if enter then
+        sendMessage(textBox.Text)
+        textBox.Text = ""
+    end
+end)
+
+--===== تصغير =====--
+local minimized = false
+local activeTween = nil
+local FULL_SIZE = UDim2.new(0, CONFIG.Width, 0, CONFIG.Height)
+local MINI_SIZE = UDim2.new(0, CONFIG.Width, 0, 40)
+
+local function setMinimized(state)
+    if activeTween then activeTween:Cancel() end
+    minimized = state
+
+    if state then
+        minBtn.Text = "▣"
+        minBtn.BackgroundColor3 = Color3.fromRGB(80, 200, 120)
+        chatArea.Visible = false
+        inputFrame.Visible = false
+    else
+        minBtn.Text = "—"
+        minBtn.BackgroundColor3 = Color3.fromRGB(60, 65, 80)
+        chatArea.Visible = true
+        inputFrame.Visible = true
+    end
+
+    activeTween = TweenService:Create(main,
+        TweenInfo.new(0.25, Enum.EasingStyle.Quart),
+        { Size = state and MINI_SIZE or FULL_SIZE })
+    activeTween:Play()
+    activeTween.Completed:Connect(function() activeTween = nil end)
+end
+
+minBtn.MouseButton1Click:Connect(function() setMinimized(not minimized) end)
+
+local lastClick = 0
+topBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        local now = tick()
+        if now - lastClick < 0.4 then
+            setMinimized(not minimized)
+            lastClick = 0
+        else
+            lastClick = now
+        end
+    end
+end)
+
+closeBtn.MouseButton1Click:Connect(function() gui:Destroy() end)
+
+UserInputService.InputBegan:Connect(function(input, processed)
+    if processed then return end
+    if input.KeyCode == CONFIG.ToggleKey then
+        main.Visible = not main.Visible
+    end
+end)
+
+--============== تشغيل ==============--
+addMessage("💡 النظام", "جاري الاتصال بالسيرفر...", "system")
+
+task.spawn(pollMessages)
+
+task.delay(3, function()
+    if connected then
+        addMessage("💡 النظام", "✅ متصل بالسيرفر — الشات يعمل بين الأجهزة", "system")
+        showHeadMessage(lp, "أهلاً! أنا في الشات 👋")
+    else
+        addMessage("💡 النظام", "⚠️ فشل الاتصال — تأكد من رابط السيرفر", "system")
+    end
+end)
+
+print("[شات التائبون] ✅ شغال | السيرفر: " .. CONFIG.ServerURL)--[[
+    ╔═══════════════════════════════════╗
+    ║   شات التائبون | Taiboun Chat      ║
     ║   شات + رسائل فوق الرأس            ║
     ║   نسخة كاملة - مُصلّحة              ║
     ╚═══════════════════════════════════╝
